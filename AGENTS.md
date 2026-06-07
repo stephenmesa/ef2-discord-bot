@@ -29,3 +29,7 @@ Next recommended customizations
 If anything in this file is unclear or you want additional scope (frontend/backend split, CI details), tell the agent which area to focus on next.
 
 This is a side project that should have the smallest possible financial operational cost. Ideally it will be free to run using the free tier of GCP and the free tier of Supabase.
+
+Follow 12-factor app principles whenever reasonable.
+
+If you encounter scenarios where you don't know the best path forward, consult with the operator to achieve clarity rather than taking a guess.
