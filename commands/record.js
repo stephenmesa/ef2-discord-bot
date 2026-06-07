@@ -53,7 +53,7 @@ module.exports = {
         : 0;
       lines.push(`Previous entry was KL ${previous.knight_level} with ${formatNumber(previous.total_medals)} medals.`);
       lines.push(`KL gain: ${klGain >= 0 ? '+' : ''}${klGain}`);
-      lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${formatNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
+      lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${compactifyNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
     }
 
     const nearbyEntries = await db.getNearbyEntries(message.author.id, 'sr', knightLevel, 5, entry.id);

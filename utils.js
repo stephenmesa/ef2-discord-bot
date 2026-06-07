@@ -33,29 +33,29 @@ function parseCompactNumber(value) {
   return NaN;
 }
 
-function compactSuffix(index) {
-  let suffix = '';
-  let current = index;
-  while (current > 0) {
-    const remainder = (current - 1) % 26;
-    suffix = String.fromCharCode(97 + remainder) + suffix;
-    current = Math.floor((current - 1) / 26);
-  }
-  return suffix;
-}
+const compactifyNumber = (value) => {
+  const formatCompactCoefficient = (value) => {
+    const absValue = Math.abs(value);
+    if (absValue >= 100) {
+      return value.toFixed(0);
+    }
+    if (absValue >= 10) {
+      return value.toFixed(1);
+    }
+    return value.toFixed(2);
+  };
 
-function formatCompactCoefficient(value) {
-  const absValue = Math.abs(value);
-  if (absValue >= 100) {
-    return value.toFixed(0);
+  const compactSuffix = (index) => {
+    let suffix = '';
+    let current = index;
+    while (current > 0) {
+      const remainder = (current - 1) % 26;
+      suffix = String.fromCharCode(97 + remainder) + suffix;
+      current = Math.floor((current - 1) / 26);
+    }
+    return suffix;
   }
-  if (absValue >= 10) {
-    return value.toFixed(1);
-  }
-  return value.toFixed(2);
-}
 
-function compactifyNumber(value) {
   if (value === undefined || value === null) return null;
 
   const raw = String(value).trim().toLowerCase();
@@ -223,7 +223,7 @@ async function buildChartBuffer(entries, mode = 'combined') {
           min: 1,
           display: mode !== 'kl',
           ticks: {
-            callback: (value) => Number(value).toLocaleString('en-US'),
+            callback: compactifyNumber,
           },
         },
       ],
@@ -255,7 +255,7 @@ async function buildChartBuffer(entries, mode = 'combined') {
           scaleLabel: { display: true, labelString: 'Total Medals' },
           min: Math.max(1, Math.min(...medals.map((v) => Math.max(1, v)))),
           ticks: {
-            callback: (value) => Number(value).toLocaleString('en-US'),
+            callback: compactifyNumber,
           },
         },
       ],
