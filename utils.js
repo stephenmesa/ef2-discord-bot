@@ -125,52 +125,66 @@ async function buildChartBuffer(entries, mode = 'combined') {
 
   const options = {
     responsive: true,
-    plugins: {
-      legend: { position: 'top' },
-      title: { display: true, text: `SR Progress Chart (${mode.toUpperCase()})` },
-    },
+    legend: { position: 'top' },
+    title: { display: true, text: `SR Progress Chart (${mode.toUpperCase()})` },
     scales: {
-      x: { title: { display: true, text: 'Recorded At' } },
-      y: {
-        type: 'linear',
-        display: mode !== 'medals' || mode === 'kl',
-        position: 'left',
-        title: { display: true, text: 'Knight Level' },
-      },
-      y1: {
-        type: mode === 'medals' ? 'logarithmic' : 'linear',
-        display: mode !== 'kl',
-        position: 'right',
-        title: { display: true, text: 'Total Medals' },
-        min: 1,
-        ticks: {
-          callback: (value) => Number(value).toLocaleString('en-US'),
+      xAxes: [
+        {
+          scaleLabel: { display: true, labelString: 'Recorded At' },
         },
-      },
+      ],
+      yAxes: [
+        {
+          id: 'y',
+          type: 'linear',
+          position: 'left',
+          scaleLabel: { display: true, labelString: 'Knight Level' },
+          display: mode !== 'medals' || mode === 'kl',
+        },
+        {
+          id: 'y1',
+          type: mode === 'medals' ? 'logarithmic' : 'linear',
+          position: 'right',
+          scaleLabel: { display: true, labelString: 'Total Medals' },
+          min: 1,
+          display: mode !== 'kl',
+          ticks: {
+            callback: (value) => Number(value).toLocaleString('en-US'),
+          },
+        },
+      ],
     },
   };
 
   if (mode === 'kl') {
     options.scales = {
-      x: options.scales.x,
-      y: {
-        type: 'linear',
-        title: { display: true, text: 'Knight Level' },
-      },
+      xAxes: options.scales.xAxes,
+      yAxes: [
+        {
+          id: 'y',
+          type: 'linear',
+          position: 'left',
+          scaleLabel: { display: true, labelString: 'Knight Level' },
+        },
+      ],
     };
   }
 
   if (mode === 'medals') {
     options.scales = {
-      x: options.scales.x,
-      y: {
-        type: 'logarithmic',
-        title: { display: true, text: 'Total Medals' },
-        min: Math.max(1, Math.min(...medals.map((v) => Math.max(1, v)))),
-        ticks: {
-          callback: (value) => Number(value).toLocaleString('en-US'),
+      xAxes: options.scales.xAxes,
+      yAxes: [
+        {
+          id: 'y',
+          type: 'logarithmic',
+          position: 'left',
+          scaleLabel: { display: true, labelString: 'Total Medals' },
+          min: Math.max(1, Math.min(...medals.map((v) => Math.max(1, v)))),
+          ticks: {
+            callback: (value) => Number(value).toLocaleString('en-US'),
+          },
         },
-      },
+      ],
     };
   }
 
