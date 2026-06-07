@@ -5,13 +5,19 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/stephenmesa/ef2-discord-bot.git"
   },
-  "keywords": ["discord", "bot", "ef2", "endless frontier 2", "soul rest"],
+  "keywords": [
+    "discord",
+    "bot",
+    "ef2",
+    "endless frontier 2",
+    "soul rest"
+  ],
   "author": "",
   "license": "MIT",
   "type": "commonjs",
@@ -24,5 +30,8 @@
   "bugs": {
     "url": "https://github.com/stephenmesa/ef2-discord-bot/issues"
   },
-  "homepage": "https://github.com/stephenmesa/ef2-discord-bot#readme"
+  "homepage": "https://github.com/stephenmesa/ef2-discord-bot#readme",
+  "devDependencies": {
+    "jest": "^30.4.2"
+  }
 }

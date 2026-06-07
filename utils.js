@@ -11,12 +11,23 @@ function parseCompactNumber(value) {
     return numeric;
   }
 
-  const compactMatch = raw.match(/^([0-9]+)([a-j])$/i);
+  // Support compact notation with optional decimals: "92.8b" or "92b"
+  // Single or multiple letters: a-z, aa-az, ba-bz, etc.
+  const compactMatch = raw.match(/^([0-9.]+)([a-z]+)$/i);
   if (compactMatch) {
-    const integerPart = Number(compactMatch[1]);
-    const letter = compactMatch[2].toLowerCase();
-    const decimalDigit = letter.charCodeAt(0) - 'a'.charCodeAt(0);
-    return integerPart + decimalDigit / 10;
+    const numberPart = Number(compactMatch[1]);
+    const letters = compactMatch[2].toLowerCase();
+    
+    // Convert letter sequence to base-26 index (like Excel columns)
+    // a=1, b=2, ..., z=26, aa=27, ab=28, ...
+    let letterIndex = 0;
+    for (let i = 0; i < letters.length; i++) {
+      letterIndex = letterIndex * 26 + (letters.charCodeAt(i) - 'a'.charCodeAt(0) + 1);
+    }
+    
+    // Calculate exponent: 10^(3N) where N = letterIndex
+    const exponent = 3 * letterIndex;
+    return numberPart * Math.pow(10, exponent);
   }
 
   return NaN;

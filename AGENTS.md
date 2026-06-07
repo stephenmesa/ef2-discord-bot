@@ -33,3 +33,5 @@ This is a side project that should have the smallest possible financial operatio
 Follow 12-factor app principles whenever reasonable.
 
 If you encounter scenarios where you don't know the best path forward, consult with the operator to achieve clarity rather than taking a guess.
+
+Compact numbers are a concept from within the Endless Frontier 2 game. It acts as a variation on scientific notation. a number proceeded by a letter to indicate how many decimal places should move. The letter `a` refers to multiplying by 10^3, `b` is 10^6, `c` is 10^9. It can even go into multiple letters, such as `aa` referring to 10^81. The general formula is 10^(3N) where N is the index of the letter(s) after the number.
