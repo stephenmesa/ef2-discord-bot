@@ -33,15 +33,89 @@ function parseCompactNumber(value) {
   return NaN;
 }
 
+function compactSuffix(index) {
+  let suffix = '';
+  let current = index;
+  while (current > 0) {
+    const remainder = (current - 1) % 26;
+    suffix = String.fromCharCode(97 + remainder) + suffix;
+    current = Math.floor((current - 1) / 26);
+  }
+  return suffix;
+}
+
+function formatCompactCoefficient(value) {
+  const absValue = Math.abs(value);
+  if (absValue >= 100) {
+    return value.toFixed(0);
+  }
+  if (absValue >= 10) {
+    return value.toFixed(1);
+  }
+  return value.toFixed(2);
+}
+
+function compactifyNumber(value) {
+  if (value === undefined || value === null) return null;
+
+  const raw = String(value).trim().toLowerCase();
+  if (raw.length === 0) return null;
+
+  const compactMatch = raw.match(/^([0-9]+(?:\.[0-9]+)?)([a-z]+)$/i);
+  if (compactMatch) {
+    const numberPart = Number(compactMatch[1]);
+    if (Number.isNaN(numberPart)) return null;
+
+    const coefficient = compactMatch[1];
+    const digitsOnly = coefficient.replace('.', '');
+    if (digitsOnly.length <= 3) {
+      const preserved = coefficient.replace(/\.0+$/, '');
+      return `${preserved}${compactMatch[2].toLowerCase()}`;
+    }
+
+    return `${formatCompactCoefficient(numberPart)}${compactMatch[2].toLowerCase()}`;
+  }
+
+  const numeric = Number(raw.replace(/,/g, ''));
+  if (Number.isNaN(numeric)) return null;
+
+  if (Math.abs(numeric) < 1000) {
+    return Number.isInteger(numeric) ? numeric.toString() : Number(numeric.toFixed(3)).toString();
+  }
+
+  let exponent = Math.floor(Math.log10(Math.abs(numeric)) / 3) * 3;
+  let suffixIndex = exponent / 3;
+  let reduced = numeric / Math.pow(10, exponent);
+  let compactValue = formatCompactCoefficient(reduced);
+
+  if (Math.abs(Number(compactValue)) >= 1000) {
+    reduced /= 1000;
+    suffixIndex += 1;
+    compactValue = formatCompactCoefficient(reduced);
+  }
+
+  return `${compactValue}${compactSuffix(suffixIndex)}`;
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
 function formatNumber(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+  if (value === null || value === undefined) {
     return String(value);
   }
-  return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+  const raw = String(value).trim();
+  if (/^[0-9]+(?:\.[0-9]+)?[a-z]+$/i.test(raw)) {
+    return raw.toLowerCase();
+  }
+
+  const numeric = Number(raw.replace(/,/g, ''));
+  if (Number.isNaN(numeric)) {
+    return raw;
+  }
+  return numeric.toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 
 function formatAge(timestamp) {
@@ -97,7 +171,7 @@ async function buildChartBuffer(entries, mode = 'combined') {
 
   const datasets = [];
   const levels = entries.map((entry) => Number(entry.knight_level));
-  const medals = entries.map((entry) => Number(entry.total_medals));
+  const medals = entries.map((entry) => parseCompactNumber(entry.total_medals));
 
   if (mode === 'combined' || mode === 'kl') {
     datasets.push({
@@ -210,8 +284,8 @@ function buildProgressCsv(rows) {
       row.id,
       row.entry_type,
       row.knight_level,
-      Number(row.total_medals),
-      Number(row.sr_mpm),
+      row.total_medals,
+      row.sr_mpm,
       Number(row.estimated_sr_pct).toFixed(2),
       Number(row.estimated_double_sr_pct).toFixed(2),
       new Date(row.created_at).toISOString(),
@@ -223,6 +297,7 @@ function buildProgressCsv(rows) {
 
 module.exports = {
   parseCompactNumber,
+  compactifyNumber,
   clamp,
   formatNumber,
   formatAge,

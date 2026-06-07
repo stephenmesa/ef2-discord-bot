@@ -3,27 +3,29 @@ module.exports = {
   aliases: ['sr'],
   description: 'Records SR progress. Usage: record <knight level> <total medals> <SR mpm>',
   async execute(message, args, context) {
-    const { db, parseCompactNumber, calculateSrPercent, computePercentile, formatNumber } = context;
+    const { db, parseCompactNumber, compactifyNumber, calculateSrPercent, computePercentile, formatNumber } = context;
 
     if (args.length < 3) {
       return message.reply('Usage: record <knight level> <total medals> <SR mpm>');
     }
 
     const knightLevel = parseInt(args[0], 10);
-    const totalMedals = parseCompactNumber(args[1]);
-    const srMpm = parseCompactNumber(args[2]);
+    const totalMedalsValue = parseCompactNumber(args[1]);
+    const srMpmValue = parseCompactNumber(args[2]);
+    const totalMedals = compactifyNumber(args[1]);
+    const srMpm = compactifyNumber(args[2]);
 
     if (!Number.isInteger(knightLevel) || knightLevel <= 0) {
       return message.reply('Knight level must be a whole number greater than zero.');
     }
-    if (!Number.isFinite(totalMedals) || totalMedals <= 0) {
+    if (!Number.isFinite(totalMedalsValue) || totalMedalsValue <= 0) {
       return message.reply('Total medals must be a positive number.');
     }
-    if (!Number.isFinite(srMpm) || srMpm <= 0) {
+    if (!Number.isFinite(srMpmValue) || srMpmValue <= 0) {
       return message.reply('SR mpm must be a positive number.');
     }
 
-    const estimatedSrPct = calculateSrPercent(totalMedals, srMpm);
+    const estimatedSrPct = calculateSrPercent(totalMedalsValue, srMpmValue);
     const estimatedDoubleSrPct = Math.min(100, estimatedSrPct * 2);
     const previous = await db.getLatestEntry(message.author.id, 'sr');
     const entry = await db.insertProgress({
@@ -44,9 +46,10 @@ module.exports = {
 
     if (previous) {
       const klGain = knightLevel - Number(previous.knight_level);
-      const medalChange = totalMedals - Number(previous.total_medals);
-      const medalGainPercent = Number(previous.total_medals) > 0
-        ? ((totalMedals - Number(previous.total_medals)) / Number(previous.total_medals)) * 100
+      const previousMedals = parseCompactNumber(previous.total_medals);
+      const medalChange = totalMedalsValue - previousMedals;
+      const medalGainPercent = previousMedals > 0
+        ? ((totalMedalsValue - previousMedals) / previousMedals) * 100
         : 0;
       lines.push(`Previous entry was KL ${previous.knight_level} with ${formatNumber(previous.total_medals)} medals.`);
       lines.push(`KL gain: ${klGain >= 0 ? '+' : ''}${klGain}`);

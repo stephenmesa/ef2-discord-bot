@@ -1,4 +1,4 @@
-const { parseCompactNumber } = require('./utils');
+const { parseCompactNumber, compactifyNumber } = require('./utils');
 
 describe('parseCompactNumber', () => {
   describe('plain numbers', () => {
@@ -80,5 +80,30 @@ describe('parseCompactNumber', () => {
     test('returns NaN for numbers with invalid formats', () => {
       expect(parseCompactNumber('12.34.56')).toBeNaN();
     });
+  });
+});
+
+describe('compactifyNumber', () => {
+  test('preserves existing compact notation in lowercase', () => {
+    expect(compactifyNumber('5A')).toBe('5a');
+    expect(compactifyNumber('92.8B')).toBe('92.8b');
+  });
+
+  test.each([
+    ['1234', '1.23a'],
+    ['5.62b', '5.62b'],
+    ['123.4c', '123c'],
+    ['1000000', '1.00b'],
+    ['13000000', '13.0b'],
+    [5.62E78, '5.62z'],
+    [5.62E81, '5.62aa'],
+    [5.62E84, '5.62ab']
+  ])('converts raw numbers larger than 999 to compact notation', (input, expected) => {
+    expect(compactifyNumber(input)).toBe(expected);
+  });
+
+  test('keeps small numbers as plain values', () => {
+    expect(compactifyNumber('999')).toBe('999');
+    expect(compactifyNumber('123')).toBe('123');
   });
 });
