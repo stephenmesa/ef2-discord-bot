@@ -74,18 +74,18 @@ The bot must run in a Node.js environment and depends on the following environme
 
 ### 5.3 Progress History and Management Commands
 
-- `history <raid|sr>`
-  - Returns the user’s recorded history for SR or raid entries.
+- `history`
+  - Returns the user’s recorded history for SR entries.
   - Sends a CSV file attachment of entries in a private message.
   - If no history exists, informs the user and suggests how to record entries.
 
-- `undo <raid|sr>`
-  - Deletes the user’s most recent raid or SR entry.
+- `undo`
+  - Deletes the user’s most recent SR entry.
   - Returns confirmation including the deleted entry details and age.
   - If no matching entry exists, returns an error message.
 
-- `delete <raid|sr> <ID>`
-  - Deletes a specific entry by ID for the user.
+- `delete <ID>`
+  - Deletes a specific SR entry by ID for the user.
   - Returns confirmation including deleted entry details and age.
   - Handles invalid IDs or missing records gracefully.
 

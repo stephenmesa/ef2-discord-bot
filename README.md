@@ -32,9 +32,9 @@ Optional:
 - `donate` — Displays donation instructions.
 - `record <knight level> <total medals> <SR mpm>` — Record SR progress. Alias: `sr`.
 - `grade` — Show current SR grade based on nearby entries.
-- `history <sr|raid>` — Send your entry history as a CSV file via DM.
-- `undo <sr|raid>` — Delete your most recent entry.
-- `delete <sr|raid> <ID>` — Delete a specific entry by ID.
+- `history` — Send your entry history as a CSV file via DM.
+- `undo` — Delete your most recent entry.
+- `delete <ID>` — Delete a specific entry by ID.
 - `graph [kl|medals]` — Generate a progress chart PNG.
 
 ## Setup

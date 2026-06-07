@@ -46,8 +46,8 @@ async function initDatabase() {
 function normalizeEntryType(type) {
   if (!type) return 'sr';
   const normalized = String(type).trim().toLowerCase();
-  if (['sr', 'raid'].includes(normalized)) {
-    return normalized;
+  if (normalized === 'sr') {
+    return 'sr';
   }
   throw new Error('Unknown entry type');
 }
@@ -146,7 +146,6 @@ async function getStats() {
       SUM(CASE WHEN created_at >= $1 THEN 1 ELSE 0 END) AS count_last_day,
       SUM(CASE WHEN created_at >= $2 THEN 1 ELSE 0 END) AS count_last_week,
       SUM(CASE WHEN entry_type = 'sr' THEN 1 ELSE 0 END) AS total_sr,
-      SUM(CASE WHEN entry_type = 'raid' THEN 1 ELSE 0 END) AS total_raid,
       COUNT(*) AS total_entries
     FROM progress;
   `, [oneDayAgo, oneWeekAgo]);
@@ -154,7 +153,6 @@ async function getStats() {
   stats.countLastDay = Number(result.rows[0].count_last_day || 0);
   stats.countLastWeek = Number(result.rows[0].count_last_week || 0);
   stats.totalSr = Number(result.rows[0].total_sr || 0);
-  stats.totalRaid = Number(result.rows[0].total_raid || 0);
   stats.totalEntries = Number(result.rows[0].total_entries || 0);
   return stats;
 }

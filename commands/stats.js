@@ -12,7 +12,6 @@ module.exports = {
       'EF2 Discord Bot Usage Stats',
       `Total entries: ${stats.totalEntries}`,
       `SR entries: ${stats.totalSr}`,
-      `Raid entries: ${stats.totalRaid}`,
       `Entries last 24h: ${stats.countLastDay}`,
       `Entries last 7d: ${stats.countLastWeek}`,
       `Connected guilds: ${guildCount}`,

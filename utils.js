@@ -140,8 +140,8 @@ function formatEntry(row) {
 function parseEntryType(type) {
   if (!type) return 'sr';
   const normalized = String(type).trim().toLowerCase();
-  if (['sr', 'raid'].includes(normalized)) {
-    return normalized;
+  if (normalized === 'sr') {
+    return 'sr';
   }
   return null;
 }
