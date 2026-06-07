@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { SlashCommandBuilder } = require('discord.js');
 
 // Load all command files
 const commandFiles = fs.readdirSync(__dirname).filter(
@@ -34,10 +35,72 @@ function getCommandHelp(name) {
   return `**${command.name}** — ${command.description}`;
 }
 
+function buildSlashCommands() {
+  const slashCommands = [];
+  
+  for (const command of commands.values()) {
+    const builder = new SlashCommandBuilder()
+      .setName(command.name)
+      .setDescription(command.description);
+    
+    // Add options if defined
+    if (command.slashOptions && Array.isArray(command.slashOptions)) {
+      for (const option of command.slashOptions) {
+        const { name, description, type, required = false, choices } = option;
+        
+        if (type === 3) { // STRING
+          if (choices) {
+            builder.addStringOption(opt => 
+              opt.setName(name).setDescription(description).setRequired(required)
+                .addChoices(...choices)
+            );
+          } else {
+            builder.addStringOption(opt => 
+              opt.setName(name).setDescription(description).setRequired(required)
+            );
+          }
+        } else if (type === 4) { // INTEGER
+          if (choices) {
+            builder.addIntegerOption(opt =>
+              opt.setName(name).setDescription(description).setRequired(required)
+                .addChoices(...choices)
+            );
+          } else {
+            builder.addIntegerOption(opt =>
+              opt.setName(name).setDescription(description).setRequired(required)
+            );
+          }
+        } else if (type === 5) { // BOOLEAN
+          builder.addBooleanOption(opt =>
+            opt.setName(name).setDescription(description).setRequired(required)
+          );
+        } else if (type === 6) { // USER
+          builder.addUserOption(opt =>
+            opt.setName(name).setDescription(description).setRequired(required)
+          );
+        } else if (type === 7) { // CHANNEL
+          builder.addChannelOption(opt =>
+            opt.setName(name).setDescription(description).setRequired(required)
+          );
+        } else if (type === 8) { // ROLE
+          builder.addRoleOption(opt =>
+            opt.setName(name).setDescription(description).setRequired(required)
+          );
+        }
+      }
+    }
+    
+    slashCommands.push(builder.toJSON());
+  }
+  
+  return slashCommands;
+}
+
 module.exports = {
   commands,
   aliases,
   getCommandByName,
   getAllCommands,
   getCommandHelp,
+  buildSlashCommands,
 };

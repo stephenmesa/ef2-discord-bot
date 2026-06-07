@@ -3,7 +3,8 @@ module.exports = {
   aliases: [],
   description: 'Admin-only bot usage statistics.',
   adminOnly: true,
-  async execute(message, args, context) {
+  slashOptions: [],
+  async execute(interaction, args, context) {
     const { client, db, sendDmWithAttachment } = context;
     const stats = await db.getStats();
     const guildCount = client.guilds.cache.size;
@@ -17,14 +18,13 @@ module.exports = {
       `Connected guilds: ${guildCount}`,
       `Known text channels: ${channelCount}`,
       `Cached users: ${client.users.cache.size}`,
-      `Bot prefix: ${context.prefix}`,
     ];
 
     const buffer = Buffer.from(lines.join('\n'), 'utf8');
-    const sent = await sendDmWithAttachment(message.author, 'Your stats are attached.', buffer, 'bot-stats.txt');
+    const sent = await sendDmWithAttachment(interaction.user, 'Your stats are attached.', buffer, 'bot-stats.txt');
     if (sent) {
-      return message.reply('Sent usage statistics to your DMs.');
+      return interaction.reply('Sent usage statistics to your DMs.');
     }
-    return message.reply('Unable to send you a DM. Please enable direct messages from this server and try again.');
+    return interaction.reply('Unable to send you a DM. Please enable direct messages from this server and try again.');
   },
 };

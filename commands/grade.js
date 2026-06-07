@@ -2,16 +2,17 @@ module.exports = {
   name: 'grade',
   aliases: [],
   description: 'Shows your current SR grade based on nearby SR entries.',
-  async execute(message, args, context) {
+  slashOptions: [],
+  async execute(interaction, args, context) {
     const { db, computePercentile, formatEntry } = context;
 
-    const latest = await db.getLatestEntry(message.author.id, 'sr');
+    const latest = await db.getLatestEntry(interaction.user.id, 'sr');
     if (!latest) {
-      return message.reply('No SR progress found. Use `record` or `sr` to add your first entry.');
+      return interaction.reply('No SR progress found. Use `record` or `sr` to add your first entry.');
     }
 
     const nearbyEntries = await db.getNearbyEntries(
-      message.author.id,
+      interaction.user.id,
       'sr',
       Number(latest.knight_level),
       5,
@@ -19,12 +20,12 @@ module.exports = {
     );
 
     if (nearbyEntries.length === 0) {
-      return message.reply('No nearby entries available to compute a grade. Record more entries around your current KL.');
+      return interaction.reply('No nearby entries available to compute a grade. Record more entries around your current KL.');
     }
 
     const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
     const grade = computePercentile(Number(latest.estimated_sr_pct), scores);
-    return message.reply(
+    return interaction.reply(
       [`Your latest SR entry:`, formatEntry(latest), `Grade percentile among ${nearbyEntries.length} nearby entries: ${grade}%`].join('\n')
     );
   },

@@ -2,34 +2,53 @@ module.exports = {
   name: 'record',
   aliases: ['sr'],
   description: 'Records SR progress. Usage: record <knight level> <total medals> <SR mpm>',
-  async execute(message, args, context) {
+  slashOptions: [
+    {
+      name: 'knight_level',
+      description: 'Your current knight level',
+      type: 4, // INTEGER
+      required: true,
+    },
+    {
+      name: 'total_medals',
+      description: 'Your total medals in compact format (e.g., 1.23a for 1.23 × 10³)',
+      type: 3, // STRING
+      required: true,
+    },
+    {
+      name: 'sr_mpm',
+      description: 'Your SR medals per minute in compact format',
+      type: 3, // STRING
+      required: true,
+    },
+  ],
+  async execute(interaction, args, context) {
     const { db, parseCompactNumber, compactifyNumber, calculateSrPercent, computePercentile, formatNumber } = context;
 
-    if (args.length < 3) {
-      return message.reply('Usage: record <knight level> <total medals> <SR mpm>');
-    }
+    const knightLevel = args[0];
+    const totalMedalsArg = args[1];
+    const srMpmArg = args[2];
 
-    const knightLevel = parseInt(args[0], 10);
-    const totalMedalsValue = parseCompactNumber(args[1]);
-    const srMpmValue = parseCompactNumber(args[2]);
-    const totalMedals = compactifyNumber(args[1]);
-    const srMpm = compactifyNumber(args[2]);
+    const totalMedalsValue = parseCompactNumber(totalMedalsArg);
+    const srMpmValue = parseCompactNumber(srMpmArg);
+    const totalMedals = compactifyNumber(totalMedalsArg);
+    const srMpm = compactifyNumber(srMpmArg);
 
     if (!Number.isInteger(knightLevel) || knightLevel <= 0) {
-      return message.reply('Knight level must be a whole number greater than zero.');
+      return interaction.reply('Knight level must be a whole number greater than zero.');
     }
     if (!Number.isFinite(totalMedalsValue) || totalMedalsValue <= 0) {
-      return message.reply('Total medals must be a positive number.');
+      return interaction.reply('Total medals must be a positive number.');
     }
     if (!Number.isFinite(srMpmValue) || srMpmValue <= 0) {
-      return message.reply('SR mpm must be a positive number.');
+      return interaction.reply('SR mpm must be a positive number.');
     }
 
     const estimatedSrPct = calculateSrPercent(totalMedalsValue, srMpmValue);
     const estimatedDoubleSrPct = Math.min(100, estimatedSrPct * 2);
-    const previous = await db.getLatestEntry(message.author.id, 'sr');
+    const previous = await db.getLatestEntry(interaction.user.id, 'sr');
     const entry = await db.insertProgress({
-      userId: message.author.id,
+      userId: interaction.user.id,
       type: 'sr',
       knightLevel,
       totalMedals,
@@ -56,7 +75,7 @@ module.exports = {
       lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${compactifyNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
     }
 
-    const nearbyEntries = await db.getNearbyEntries(message.author.id, 'sr', knightLevel, 5, entry.id);
+    const nearbyEntries = await db.getNearbyEntries(interaction.user.id, 'sr', knightLevel, 5, entry.id);
     if (nearbyEntries.length > 0) {
       const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
       const grade = computePercentile(Number(estimatedSrPct), scores);
@@ -65,6 +84,6 @@ module.exports = {
       lines.push('No nearby entries found for grade comparison. Record more SR progress to build your grade profile.');
     }
 
-    return message.reply(lines.join('\n'));
+    return interaction.reply(lines.join('\n'));
   },
 };

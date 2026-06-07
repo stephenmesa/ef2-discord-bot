@@ -2,19 +2,16 @@ module.exports = {
   name: 'undo',
   aliases: [],
   description: 'Deletes your most recent SR entry. Usage: undo',
-  async execute(message, args, context) {
+  slashOptions: [],
+  async execute(interaction, args, context) {
     const { db, formatEntry, formatAge } = context;
 
-    if (args.length > 0) {
-      return message.reply('Usage: undo');
-    }
-
-    const deleted = await db.deleteLatestEntry(message.author.id, 'sr');
+    const deleted = await db.deleteLatestEntry(interaction.user.id, 'sr');
     if (!deleted) {
-      return message.reply('No SR entries found to undo.');
+      return interaction.reply('No SR entries found to undo.');
     }
 
-    return message.reply([
+    return interaction.reply([
       'Deleted latest SR entry:',
       formatEntry(deleted),
       `Recorded ${formatAge(deleted.created_at)}.`,

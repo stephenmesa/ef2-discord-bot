@@ -15,7 +15,6 @@ A Discord bot for assisting players of Endless Frontier 2 with Soul Rest progres
 Required:
 - `DISCORD_TOKEN` - Discord bot token.
 - `DATABASE_URL` - PostgreSQL connection string.
-- `BOT_PREFIX` - Command prefix, for example `!`.
 - `ADMIN_USERIDS` - Comma-separated Discord user IDs for admin access.
 - `DONATION_URL` - Donation link shown by the `donate` command.
 
@@ -26,16 +25,18 @@ Optional:
 
 ## Commands
 
-- `ping` — Responds with `Pong!`
-- `help [command]` — Lists commands or shows command usage.
-- `stats` — Admin-only bot usage stats sent via DM.
-- `donate` — Displays donation instructions.
-- `record <knight level> <total medals> <SR mpm>` — Record SR progress. Alias: `sr`.
-- `grade` — Show current SR grade based on nearby entries.
-- `history` — Send your entry history as a CSV file via DM.
-- `undo` — Delete your most recent entry.
-- `delete <ID>` — Delete a specific entry by ID.
-- `graph [kl|medals]` — Generate a progress chart PNG.
+All commands are now Discord slash commands. Use `/` to invoke them:
+
+- `/ping` — Responds with `Pong!`
+- `/help [command]` — Lists commands or shows command usage.
+- `/stats` — Admin-only bot usage stats sent via DM.
+- `/donate` — Displays donation instructions.
+- `/record <knight_level> <total_medals> <sr_mpm>` — Record SR progress.
+- `/grade` — Show current SR grade based on nearby entries.
+- `/history` — Send your entry history as a CSV file via DM.
+- `/undo` — Delete your most recent entry.
+- `/delete <id>` — Delete a specific entry by ID.
+- `/graph [mode]` — Generate a progress chart PNG. Options: `combined` (default), `kl`, or `medals`.
 
 ## Setup
 
@@ -64,7 +65,6 @@ Run with environment variables:
 ```bash
 docker run -e DISCORD_TOKEN="your_token" \
   -e DATABASE_URL="your_database_url" \
-  -e BOT_PREFIX="!" \
   -e ADMIN_USERIDS="1234567890" \
   -e DONATION_URL="https://example.com/donate" \
   ef2-discord-bot

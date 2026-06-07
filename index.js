@@ -1,11 +1,10 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, AttachmentBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, AttachmentBuilder, REST, Routes } = require('discord.js');
 const db = require('./db');
 const utils = require('./utils');
 const commandLoader = require('./commands');
 
 const token = process.env.DISCORD_TOKEN;
-const prefix = process.env.BOT_PREFIX || '!';
 const donationUrl = process.env.DONATION_URL || 'https://example.com/donate';
 const botStatus = process.env.BOT_STATUS || 'tracking EF2 SR progress';
 const cooldownSeconds = Number(process.env.COOLDOWN_SECONDS || 3);
@@ -67,7 +66,6 @@ function buildContext() {
   return {
     client,
     db,
-    prefix,
     donationUrl,
     // Utility functions
     ...utils,
@@ -79,12 +77,29 @@ function buildContext() {
   };
 }
 
+// Register slash commands
+async function registerSlashCommands() {
+  try {
+    const commands = commandLoader.buildSlashCommands();
+    const rest = new REST({ version: '10' }).setToken(token);
+
+    console.log(`Registering ${commands.length} slash commands...`);
+    
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+    
+    console.log(`Successfully registered ${commands.length} slash commands.`);
+  } catch (error) {
+    console.error('Failed to register slash commands:', error);
+  }
+}
+
 client.on('clientReady', async () => {
   try {
     await db.initDatabase();
     console.log(`Logged in as ${client.user.tag}`);
     console.log(`Connected to ${client.guilds.cache.size} guild(s): ${client.guilds.cache.map((guild) => guild.name).join(', ') || 'none'}`);
     client.user.setActivity(botStatus, { type: 'WATCHING' });
+    await registerSlashCommands();
   } catch (error) {
     console.error('Failed to initialize database:', error.message);
     console.error('Please check your DATABASE_URL environment variable and ensure the database is accessible.');
@@ -100,32 +115,42 @@ client.on('warn', (warning) => {
   console.warn('Discord client warning:', warning);
 });
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(prefix)) return;
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-  const content = message.content.slice(prefix.length).trim();
-  if (!content.length) return;
-
-  const [rawCommand, ...args] = content.split(/\s+/);
-  const command = commandLoader.getCommandByName(rawCommand);
+  const command = commandLoader.getCommandByName(interaction.commandName);
   if (!command) return;
 
-  const cooldownRemaining = checkCooldown(message.author.id, command.name);
+  const cooldownRemaining = checkCooldown(interaction.user.id, command.name);
   if (cooldownRemaining > 0) {
-    return message.reply(`Please wait ${cooldownRemaining}s before using that command again.`);
+    return interaction.reply({
+      content: `Please wait ${cooldownRemaining}s before using that command again.`,
+      ephemeral: true,
+    });
   }
 
-  if (command.adminOnly && !isAdmin(message.author.id)) {
-    return message.reply('You do not have permission to use that command.');
+  if (command.adminOnly && !isAdmin(interaction.user.id)) {
+    return interaction.reply({
+      content: 'You do not have permission to use that command.',
+      ephemeral: true,
+    });
   }
 
   try {
     const context = buildContext();
-    await command.execute(message, args, context);
+    // Collect options into an args-like array
+    const options = interaction.options.data.map(opt => opt.value);
+    await command.execute(interaction, options, context);
   } catch (error) {
     console.error(`Command ${command.name} execution failed:`, error);
-    return message.reply('Something went wrong while running that command. Please try again later.');
+    const response = {
+      content: 'Something went wrong while running that command. Please try again later.',
+      ephemeral: true,
+    };
+    if (interaction.replied) {
+      return interaction.editReply(response);
+    }
+    return interaction.reply(response);
   }
 });
 
