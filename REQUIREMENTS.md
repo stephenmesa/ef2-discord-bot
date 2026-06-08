@@ -4,7 +4,7 @@
 
 This document defines the requirements for the Endless Frontier 2 Discord Bot, a Discord bot designed to help Endless Frontier 2 players record and analyze their game progress.
 
-The bot is command-driven via a configurable prefix and stores progress data in a backing persistence store.
+The bot is command-driven via Discord slash commands and stores progress data in a backing persistence store.
 
 ## 2. Goals
 
@@ -30,7 +30,6 @@ The bot is command-driven via a configurable prefix and stores progress data in 
 The bot must run in a Node.js environment and depends on the following environment variables:
 
 - `DISCORD_TOKEN` - Discord bot API token.
-- `BOT_PREFIX` - Command prefix used by the bot (commonly `!`).
 - `ADMIN_USERIDS` - Comma-separated Discord user IDs for admin command access.
 - `DONATION_URL` - URL displayed by the donation command.
 - `BOT_STATUS` - Optional bot status text on startup.
@@ -120,7 +119,7 @@ The bot must run in a Node.js environment and depends on the following environme
 
 ## 10. Bot Behavior and Constraints
 
-- Message handling is prefix-based and ignores messages from bots.
+- Message handling is done via Discord slash commands.
 - Command names are case-insensitive.
 - Supports aliases for convenience.
 - Rate-limits each command per user with a default cooldown of 3 seconds.
