@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'stats',
   aliases: [],
@@ -23,8 +25,8 @@ module.exports = {
     const buffer = Buffer.from(lines.join('\n'), 'utf8');
     const sent = await sendDmWithAttachment(interaction.user, 'Your stats are attached.', buffer, 'bot-stats.txt');
     if (sent) {
-      return interaction.reply('Sent usage statistics to your DMs.');
+      return interaction.reply({ content: 'Sent usage statistics to your DMs.', flags: MessageFlags.Ephemeral });
     }
-    return interaction.reply('Unable to send you a DM. Please enable direct messages from this server and try again.');
+    return interaction.reply({ content: 'Unable to send you a DM. Please enable direct messages from this server and try again.', flags: MessageFlags.Ephemeral });
   },
 };

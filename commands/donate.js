@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'donate',
   aliases: ['donation', 'donations'],
@@ -5,6 +7,6 @@ module.exports = {
   slashOptions: [],
   async execute(interaction, args, context) {
     const { donationUrl } = context;
-    return interaction.reply(`Support the bot with donations: ${donationUrl}`);
+    return interaction.reply({ content: `Support the bot with donations: ${donationUrl}`, flags: MessageFlags.Ephemeral });
   },
 };

@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'help',
   aliases: ['commands'],
@@ -21,13 +23,13 @@ module.exports = {
       for (const cmd of commands) {
         lines.push(`- ${cmd.name} — ${cmd.description}`);
       }
-      return interaction.reply(lines.join('\n'));
+      return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
     }
 
     const help = getCommandHelp(commandName.toLowerCase());
     if (!help) {
-      return interaction.reply(`No help available for command: ${commandName}`);
+      return interaction.reply({ content: `No help available for command: ${commandName}`, flags: MessageFlags.Ephemeral });
     }
-    return interaction.reply(help);
+    return interaction.reply({ content: help, flags: MessageFlags.Ephemeral });
   },
 };

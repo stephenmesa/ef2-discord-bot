@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'delete',
   aliases: [],
@@ -15,18 +17,18 @@ module.exports = {
 
     const id = args[0];
     if (!Number.isInteger(id) || id <= 0) {
-      return interaction.reply('Please provide a valid entry ID.');
+      return interaction.reply({ content: 'Please provide a valid entry ID.', flags: MessageFlags.Ephemeral });
     }
 
     const deleted = await db.deleteEntryById(interaction.user.id, 'sr', id);
     if (!deleted) {
-      return interaction.reply(`Could not find an SR entry with ID ${id}.`);
+      return interaction.reply({ content: `Could not find an SR entry with ID ${id}.`, flags: MessageFlags.Ephemeral });
     }
 
-    return interaction.reply([
+    return interaction.reply({ content: [
       'Deleted SR entry:',
       formatEntry(deleted),
       `Recorded ${formatAge(deleted.created_at)}.`,
-    ].join('\n'));
+    ].join('\n'), flags: MessageFlags.Ephemeral });
   },
 };

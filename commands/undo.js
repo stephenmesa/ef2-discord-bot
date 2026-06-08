@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'undo',
   aliases: [],
@@ -8,13 +10,13 @@ module.exports = {
 
     const deleted = await db.deleteLatestEntry(interaction.user.id, 'sr');
     if (!deleted) {
-      return interaction.reply('No SR entries found to undo.');
+      return interaction.reply({ content: 'No SR entries found to undo.', flags: MessageFlags.Ephemeral });
     }
 
-    return interaction.reply([
+    return interaction.reply({ content: [
       'Deleted latest SR entry:',
       formatEntry(deleted),
       `Recorded ${formatAge(deleted.created_at)}.`,
-    ].join('\n'));
+    ].join('\n'), flags: MessageFlags.Ephemeral });
   },
 };

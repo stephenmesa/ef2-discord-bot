@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'graph',
   aliases: [],
@@ -24,11 +26,11 @@ module.exports = {
 
     const rows = await db.getAllEntries(interaction.user.id, 'sr', 200);
     if (!rows.length) {
-      return interaction.reply('No SR entries found. Record progress to generate a graph.');
+      return interaction.reply({ content: 'No SR entries found. Record progress to generate a graph.', flags: MessageFlags.Ephemeral });
     }
 
     const buffer = await buildChartBuffer(rows, mode);
     const attachment = new AttachmentBuilder(buffer, { name: `sr-graph-${mode}.png` });
-    return interaction.reply({ content: `Here is your SR ${mode === 'combined' ? 'progress' : mode} chart.`, files: [attachment] });
+    return interaction.reply({ content: `Here is your SR ${mode === 'combined' ? 'progress' : mode} chart.`, files: [attachment], flags: MessageFlags.Ephemeral });
   },
 };

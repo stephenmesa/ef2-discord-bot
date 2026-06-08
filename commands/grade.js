@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'grade',
   aliases: [],
@@ -8,7 +10,7 @@ module.exports = {
 
     const latest = await db.getLatestEntry(interaction.user.id, 'sr');
     if (!latest) {
-      return interaction.reply('No SR progress found. Use `record` or `sr` to add your first entry.');
+      return interaction.reply({ content: 'No SR progress found. Use `record` or `sr` to add your first entry.', flags: MessageFlags.Ephemeral });
     }
 
     const nearbyEntries = await db.getNearbyEntries(
@@ -20,13 +22,15 @@ module.exports = {
     );
 
     if (nearbyEntries.length === 0) {
-      return interaction.reply('No nearby entries available to compute a grade. Record more entries around your current KL.');
+      return interaction.reply({ content: 'No nearby entries available to compute a grade. Record more entries around your current KL.', flags: MessageFlags.Ephemeral });
     }
 
     const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
     const grade = computePercentile(Number(latest.estimated_sr_pct), scores);
-    return interaction.reply(
-      [`Your latest SR entry:`, formatEntry(latest), `Grade percentile among ${nearbyEntries.length} nearby entries: ${grade}%`].join('\n')
-    );
+    return interaction.reply({ content: [
+      `Your latest SR entry:`,
+      formatEntry(latest),
+      `Grade percentile among ${nearbyEntries.length} nearby entries: ${grade}%`
+    ].join('\n'), flags: MessageFlags.Ephemeral });
   },
 };

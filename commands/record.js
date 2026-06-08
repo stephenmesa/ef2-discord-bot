@@ -1,3 +1,5 @@
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   name: 'record',
   aliases: ['sr'],
@@ -35,13 +37,13 @@ module.exports = {
     const srMpm = compactifyNumber(srMpmArg);
 
     if (!Number.isInteger(knightLevel) || knightLevel <= 0) {
-      return interaction.reply('Knight level must be a whole number greater than zero.');
+      return interaction.reply({ content: 'Knight level must be a whole number greater than zero.', flags: MessageFlags.Ephemeral });
     }
     if (!Number.isFinite(totalMedalsValue) || totalMedalsValue <= 0) {
-      return interaction.reply('Total medals must be a positive number.');
+      return interaction.reply({ content: 'Total medals must be a positive number.', flags: MessageFlags.Ephemeral });
     }
     if (!Number.isFinite(srMpmValue) || srMpmValue <= 0) {
-      return interaction.reply('SR mpm must be a positive number.');
+      return interaction.reply({ content: 'SR mpm must be a positive number.', flags: MessageFlags.Ephemeral });
     }
 
     const estimatedSrPct = calculateSrPercent(totalMedalsValue, srMpmValue);
@@ -84,6 +86,6 @@ module.exports = {
       lines.push('No nearby entries found for grade comparison. Record more SR progress to build your grade profile.');
     }
 
-    return interaction.reply(lines.join('\n'));
+    return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
   },
 };
