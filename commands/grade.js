@@ -1,4 +1,5 @@
-const { MessageFlags } = require('discord.js');
+const { MessageFlags, EmbedBuilder } = require('discord.js');
+const { formatNumber } = require('../utils');
 
 module.exports = {
   name: 'grade',
@@ -6,7 +7,7 @@ module.exports = {
   description: 'Shows your current SR grade based on nearby SR entries.',
   slashOptions: [],
   async execute(interaction, args, context) {
-    const { db, computePercentile, formatEntry } = context;
+    const { db, computePercentile } = context;
 
     const latest = await db.getLatestEntry(interaction.user.id, 'sr');
     if (!latest) {
@@ -27,10 +28,34 @@ module.exports = {
 
     const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
     const grade = computePercentile(Number(latest.estimated_sr_pct), scores);
-    return interaction.reply({ content: [
-      `Your latest SR entry:`,
-      formatEntry(latest),
-      `Grade percentile among ${nearbyEntries.length} nearby entries: ${grade}%`
-    ].join('\n'), flags: MessageFlags.Ephemeral });
+
+    const srEmbed = new EmbedBuilder()
+        .setColor(0x5865F2) // Discord Blurple, or use a custom hex like '#7289da'
+        .setTitle('✨ Latest Soul Rest Entry')
+        .setDescription(`Here is the current grading breakdown for your entry.`)
+        .addFields(
+            { name: '🆔 Entry ID', value: `${latest.id}`, inline: true },
+            { name: '⚔️ Knight Level', value: `${latest.knight_level}`, inline: true },
+            { name: '🏅 Medals', value: `${formatNumber(latest.total_medals)}`, inline: true },
+        )
+        .addFields(
+            { name: '📊 SR MPM', value: `**${formatNumber(latest.sr_mpm)}**`, inline: true },
+            { name: '📈 SR %', value: `**${Number(latest.estimated_sr_pct).toFixed(2)}%**`, inline: true },
+            { name: '⚡ Double SR %', value: `**${Number(latest.estimated_double_sr_pct).toFixed(2)}%**`, inline: true },
+        )
+        .addFields(
+            { 
+                name: '🏆 Grade Percentile', 
+                value: `**${grade}** *(among ${nearbyEntries.length} nearby ${nearbyEntries.length === '1' ? 'entry' : 'entries'})*`, 
+                inline: false 
+            }
+        )
+        .setTimestamp()
+        .setFooter({ text: 'EF2Bot by @stephenmesa' });
+
+    return interaction.reply({
+      embeds: [srEmbed],
+      flags: MessageFlags.Ephemeral
+    });
   },
 };
