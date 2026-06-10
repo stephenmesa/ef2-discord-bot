@@ -35,7 +35,7 @@ const generateEmbed = (currentEntry) =>
         { name: '⚔️ Knight Level', value: `${currentEntry.knight_level}`, inline: true },
         { name: '🏅 Medals', value: `${formatNumber(currentEntry.total_medals)}`, inline: true },
     )
-    .setTimestamp()
+    .setTimestamp(currentEntry.created_at)
     .setFooter(buildFooter());
 
 module.exports = {
