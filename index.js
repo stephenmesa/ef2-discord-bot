@@ -147,8 +147,13 @@ client.on('interactionCreate', async (interaction) => {
       content: 'Something went wrong while running that command. Please try again later.',
       flags: MessageFlags.Ephemeral,
     };
-    if (interaction.replied) {
-      return interaction.editReply(response);
+    if (interaction.replied || interaction.deferred) {
+      try {
+        return interaction.editReply(response);
+      } catch (replyError) {
+        console.error('Failed to edit failed interaction reply:', replyError);
+        return;
+      }
     }
     return interaction.reply(response);
   }
