@@ -147,12 +147,6 @@ function parseEntryType(type) {
   return null;
 }
 
-function calculateSrPercent(totalMedals, srMpm) {
-  const ratio = Number(srMpm) / Math.max(1, Number(totalMedals));
-  const percent = ratio * 100000;
-  return clamp(percent, 0.01, 100);
-}
-
 function computePercentile(currentValue, values) {
   if (!Array.isArray(values) || values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -305,6 +299,10 @@ function getEmbedColor() {
 }
 
 function buildGradeEmbed(record, grade, nearbyCount) {
+  const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
+  const totalMinutes = 4 * 60;
+  const medalsGained = parseCompactNumber(record.sr_mpm) * totalMinutes * srEfficiency;
+
   return new EmbedBuilder()
     .setColor(getEmbedColor())
     .setTitle('✨ Latest Soul Rest Entry')
@@ -316,8 +314,8 @@ function buildGradeEmbed(record, grade, nearbyCount) {
     )
     .addFields(
         { name: '📊 SR MPM', value: `**${formatNumber(record.sr_mpm)}**`, inline: true },
-        { name: '📈 SR %', value: `**${Number(record.estimated_sr_pct).toFixed(2)}%**`, inline: true },
-        { name: '⚡ Double SR %', value: `**${Number(record.estimated_double_sr_pct).toFixed(2)}%**`, inline: true },
+        { name: '📈 SR %', value: `**${Number(record.estimated_sr_pct).toFixed(2)}%** (${compactifyNumber(medalsGained)} medals gained)`, inline: true },
+        { name: '⚡ Double SR %', value: `**${Number(record.estimated_double_sr_pct).toFixed(2)}%** (${compactifyNumber(medalsGained * 2)} medals gained)`, inline: true },
     )
     .addFields(
         { 
@@ -338,7 +336,6 @@ module.exports = {
   formatAge,
   formatEntry,
   parseEntryType,
-  calculateSrPercent,
   computePercentile,
   buildChartBuffer,
   buildProgressCsv,

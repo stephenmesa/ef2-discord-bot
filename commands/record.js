@@ -25,7 +25,7 @@ module.exports = {
     },
   ],
   async execute(interaction, args, context) {
-    const { db, parseCompactNumber, compactifyNumber, calculateSrPercent, computePercentile, formatNumber } = context;
+    const { db, parseCompactNumber, compactifyNumber, computePercentile, formatNumber } = context;
 
     const knightLevel = args[0];
     const totalMedalsArg = args[1];
@@ -46,8 +46,13 @@ module.exports = {
       return interaction.reply({ content: 'SR mpm must be a positive number.', flags: MessageFlags.Ephemeral });
     }
 
-    const estimatedSrPct = calculateSrPercent(totalMedalsValue, srMpmValue);
-    const estimatedDoubleSrPct = Math.min(100, estimatedSrPct * 2);
+    const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
+    const totalMinutes = 4 * 60;
+    const medalsGained = srMpmValue * totalMinutes * srEfficiency;
+
+    const estimatedSrPct = (medalsGained / totalMedalsValue) * 100;
+    const estimatedDoubleSrPct = ((medalsGained * 2) / totalMedalsValue) * 100;
+
     const previous = await db.getLatestEntry(interaction.user.id, 'sr');
     const entry = await db.insertProgress({
       userId: interaction.user.id,
@@ -61,8 +66,8 @@ module.exports = {
 
     const lines = [
       `Recorded SR progress for KL ${knightLevel}.`,
-      `Estimated SR: ${estimatedSrPct.toFixed(2)}%`,
-      `Doubled SR percent: ${estimatedDoubleSrPct.toFixed(2)}%`,
+      `Estimated SR: ${estimatedSrPct.toFixed(2)}% (${compactifyNumber(medalsGained)} medals gained)`,
+      `Doubled SR: ${estimatedDoubleSrPct.toFixed(2)}% (${compactifyNumber(medalsGained * 2)} medals gained)`,
     ];
 
     if (previous) {

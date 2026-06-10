@@ -11,7 +11,7 @@ module.exports = {
 
     const latest = await db.getLatestEntry(interaction.user.id, 'sr');
     if (!latest) {
-      return interaction.reply({ content: 'No SR progress found. Use `record` or `sr` to add your first entry.', flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: 'No SR progress found. Use `/record` to add your first entry.', flags: MessageFlags.Ephemeral });
     }
 
     const nearbyEntries = await db.getNearbyEntries(
