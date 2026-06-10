@@ -1,4 +1,5 @@
 const { MessageFlags } = require('discord.js');
+const { formatNumber, compactifyNumber, parseCompactNumber, getPercentile, validatePercentage} = require('../utils');
 
 module.exports = {
   name: 'record',
@@ -25,7 +26,7 @@ module.exports = {
     },
   ],
   async execute(interaction, args, context) {
-    const { db, parseCompactNumber, compactifyNumber, computePercentile, formatNumber } = context;
+    const { db } = context;
 
     const knightLevel = args[0];
     const totalMedalsArg = args[1];
@@ -82,11 +83,13 @@ module.exports = {
       lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${compactifyNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
     }
 
-    const nearbyEntries = await db.getNearbyEntries('sr', knightLevel, 2, entry.id);
+    const nearbyEntries = await db.getNearbyEntries('sr', knightLevel, 1, entry.id);
     if (nearbyEntries.length > 0) {
-      const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
-      const grade = computePercentile(Number(estimatedSrPct), scores);
-      lines.push(`Your current SR grade is ${grade}% compared to ${nearbyEntries.length} nearby KL entries.`);
+      const allPercentages = nearbyEntries.map((row) => Number(row.estimated_sr_pct)).filter(validatePercentage);
+      const scoreDecimal = getPercentile(allPercentages, estimatedSrPct);
+      const score = Math.round(scoreDecimal);
+
+      lines.push(`Your current SR grade is ${score}/100 compared to ${nearbyEntries.length} nearby KL entries.`);
     } else {
       lines.push('No nearby KL entries found for grade comparison. Record more SR progress to build your grade profile.');
     }

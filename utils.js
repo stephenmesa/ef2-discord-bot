@@ -147,15 +147,6 @@ function parseEntryType(type) {
   return null;
 }
 
-function computePercentile(currentValue, values) {
-  if (!Array.isArray(values) || values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const countLess = sorted.filter((value) => value < currentValue).length;
-  const countEqual = sorted.filter((value) => value === currentValue).length;
-  const rank = countLess + countEqual / 2;
-  return Math.round((rank / sorted.length) * 100);
-}
-
 async function buildChartBuffer(entries, mode = 'combined') {
   const width = 1000;
   const height = 540;
@@ -298,15 +289,25 @@ function getEmbedColor() {
     return 0x5865F2; // Discord Blurple, or use a custom hex like '#7289da'
 }
 
-function buildGradeEmbed(record, grade, nearbyCount) {
+function buildGradeEmbed(record, assessment) {
   const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
   const totalMinutes = 4 * 60;
   const medalsGained = parseCompactNumber(record.sr_mpm) * totalMinutes * srEfficiency;
 
+  const klFields = Object.entries(assessment.kls).map(([groupKL, klAssessment]) => ({
+    name: `KL${groupKL} (${klAssessment.n} record${klAssessment.n > 1 ? 's' : ''})`,
+    value: `${klAssessment.percentageMin}%-${klAssessment.percentageMax}%`,
+    inline: true,
+  }));
+
+  const description = assessment.score
+    ? `Your SR grade is **${assessment.score}/100**`
+    : 'Sorry, but your grade could not be calculated based on lack of data';
+
   return new EmbedBuilder()
     .setColor(getEmbedColor())
     .setTitle('✨ Latest Soul Rest Entry')
-    .setDescription(`Here is the current grading breakdown for your entry.`)
+    .setDescription(description)
     .addFields(
         { name: '🆔 Entry ID', value: `${record.id}`, inline: true },
         { name: '⚔️ Knight Level', value: `${record.knight_level}`, inline: true },
@@ -318,15 +319,70 @@ function buildGradeEmbed(record, grade, nearbyCount) {
         { name: '⚡ Double SR %', value: `**${Number(record.estimated_double_sr_pct).toFixed(2)}%** (${compactifyNumber(medalsGained * 2)} medals gained)`, inline: true },
     )
     .addFields(
-        { 
-            name: '🏆 Grade Percentile', 
-            value: `**${grade}** *(among ${nearbyCount} nearby KL ${nearbyCount === 1 ? 'entry' : 'entries'})*`, 
-            inline: false 
-        }
+        ...klFields,
     )
     .setTimestamp(record.created_at)
     .setFooter(buildFooter());
 }
+
+function getPercentile(arr, num) {
+  if (arr.length === 0) return 0;
+
+  // 1. Count how many numbers are less than or equal to the target number
+  const count = arr.filter(item => item <= num).length;
+
+  // 2. Calculate the percentage
+  const percentile = (count / arr.length) * 100;
+
+  // 3. Round to a clean whole number (or use .toFixed(2) if you want decimals)
+  return Math.round(percentile);
+}
+
+// Let's assume that it's impossible to achieve an SR rate above 100%
+// (usually it's below 10%, so this should be fairly conservative)
+function validatePercentage(p) {
+  return typeof p === 'number' && !isNaN(p) && p >= 0 && p <= 100;
+}
+
+function filterOutlierProgresses(records) {
+  return records.filter(record => validatePercentage(record.percentage));
+}
+
+function assessProgress(currentPercentage, comparableProgresses) {
+  const normalizedProgresses = filterOutlierProgresses(comparableProgresses);
+  const allPercentages = normalizedProgresses.map(p => p.percentage);
+
+  const klProgresses = Object.groupBy(normalizedProgresses, ({ kl }) => kl);
+
+  const kls = Object.fromEntries(
+    Object.entries(klProgresses).map(([key, progresses]) => {
+      const percentages = progresses.map(e => e.percentage);
+      const percentageMin = Math.min(...percentages);
+      const percentageMax = Math.max(...percentages);
+      const n = progresses.length;
+
+      return [
+        key,
+        {
+          n,
+          percentageMin: Number(percentageMin.toFixed(2)),
+          percentageMax: Number(percentageMax.toFixed(2)),
+        }
+      ];
+    })
+  );
+
+  let score = null;
+  if (normalizedProgresses.length > 0) {
+    const scoreDecimal = getPercentile(allPercentages, currentPercentage);
+    score = Math.round(scoreDecimal);
+  }
+
+  return {
+    kls,
+    score,
+  };
+};
 
 module.exports = {
   parseCompactNumber,
@@ -336,10 +392,13 @@ module.exports = {
   formatAge,
   formatEntry,
   parseEntryType,
-  computePercentile,
   buildChartBuffer,
   buildProgressCsv,
   buildFooter,
   getEmbedColor,
   buildGradeEmbed,
+  assessProgress,
+  filterOutlierProgresses,
+  validatePercentage,
+  getPercentile,
 };
