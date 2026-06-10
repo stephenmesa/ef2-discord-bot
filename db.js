@@ -115,14 +115,14 @@ async function getAllEntries(userId, type = 'sr', limit = 200) {
   return result.rows;
 }
 
-async function getNearbyEntries(userId, type = 'sr', knightLevel, range = 5, excludeId = null, limit = 200) {
-  const params = [userId, normalizeEntryType(type), knightLevel - range, knightLevel + range, limit];
-  let query = `SELECT * FROM progress WHERE user_id = $1 AND entry_type = $2 AND knight_level BETWEEN $3 AND $4`;
+async function getNearbyEntries(type = 'sr', knightLevel, range = 5, excludeId = null, limit = 200) {
+  const params = [normalizeEntryType(type), Math.max(0, knightLevel - range), knightLevel + range, limit];
+  let query = `SELECT * FROM progress WHERE entry_type = $1 AND knight_level BETWEEN $2 AND $3`;
   if (excludeId !== null) {
-    query += ` AND id != $6`;
-    params.splice(5, 0, excludeId);
+    query += ` AND id != $5`;
+    params.splice(4, 0, excludeId);
   }
-  query += ` ORDER BY knight_level ASC, created_at ASC LIMIT $5;`;
+  query += ` ORDER BY knight_level ASC, created_at ASC LIMIT $4;`;
 
   const result = await pool.query(query, params);
   return result.rows;

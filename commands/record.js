@@ -13,7 +13,7 @@ module.exports = {
     },
     {
       name: 'total_medals',
-      description: 'Your total medals in compact format (e.g., 1.23a for 1.23 × 10³)',
+      description: 'Your total medals in compact format (e.g., 1.23a for 1.23 x 10³)',
       type: 3, // STRING
       required: true,
     },
@@ -77,13 +77,13 @@ module.exports = {
       lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${compactifyNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
     }
 
-    const nearbyEntries = await db.getNearbyEntries(interaction.user.id, 'sr', knightLevel, 5, entry.id);
+    const nearbyEntries = await db.getNearbyEntries('sr', knightLevel, 2, entry.id);
     if (nearbyEntries.length > 0) {
       const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
       const grade = computePercentile(Number(estimatedSrPct), scores);
-      lines.push(`Your current SR grade is ${grade}% compared to ${nearbyEntries.length} nearby entries.`);
+      lines.push(`Your current SR grade is ${grade}% compared to ${nearbyEntries.length} nearby KL entries.`);
     } else {
-      lines.push('No nearby entries found for grade comparison. Record more SR progress to build your grade profile.');
+      lines.push('No nearby KL entries found for grade comparison. Record more SR progress to build your grade profile.');
     }
 
     return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });

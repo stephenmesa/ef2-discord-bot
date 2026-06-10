@@ -1,5 +1,5 @@
 const { MessageFlags, EmbedBuilder } = require('discord.js');
-const { formatNumber, getEmbedColor, buildFooter } = require('../utils');
+const { formatNumber, getEmbedColor, buildFooter, buildGradeEmbed } = require('../utils');
 
 module.exports = {
   name: 'grade',
@@ -15,46 +15,46 @@ module.exports = {
     }
 
     const nearbyEntries = await db.getNearbyEntries(
-      interaction.user.id,
       'sr',
       Number(latest.knight_level),
-      5,
+      2,
       latest.id
     );
 
     if (nearbyEntries.length === 0) {
-      return interaction.reply({ content: 'No nearby entries available to compute a grade. Record more entries around your current KL.', flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: 'No nearby KL entries found for grade comparison. Record more SR progress to build your grade profile.', flags: MessageFlags.Ephemeral });
     }
 
     const scores = nearbyEntries.map((row) => Number(row.estimated_sr_pct));
     const grade = computePercentile(Number(latest.estimated_sr_pct), scores);
 
-    const srEmbed = new EmbedBuilder()
-        .setColor(getEmbedColor())
-        .setTitle('✨ Latest Soul Rest Entry')
-        .setDescription(`Here is the current grading breakdown for your entry.`)
-        .addFields(
-            { name: '🆔 Entry ID', value: `${latest.id}`, inline: true },
-            { name: '⚔️ Knight Level', value: `${latest.knight_level}`, inline: true },
-            { name: '🏅 Medals', value: `${formatNumber(latest.total_medals)}`, inline: true },
-        )
-        .addFields(
-            { name: '📊 SR MPM', value: `**${formatNumber(latest.sr_mpm)}**`, inline: true },
-            { name: '📈 SR %', value: `**${Number(latest.estimated_sr_pct).toFixed(2)}%**`, inline: true },
-            { name: '⚡ Double SR %', value: `**${Number(latest.estimated_double_sr_pct).toFixed(2)}%**`, inline: true },
-        )
-        .addFields(
-            { 
-                name: '🏆 Grade Percentile', 
-                value: `**${grade}** *(among ${nearbyEntries.length} nearby ${nearbyEntries.length === '1' ? 'entry' : 'entries'})*`, 
-                inline: false 
-            }
-        )
-        .setTimestamp()
-        .setFooter(buildFooter());
+    const gradeEmbed = buildGradeEmbed(latest, grade, nearbyEntries.length);
+    // const srEmbed = new EmbedBuilder()
+    //     .setColor(getEmbedColor())
+    //     .setTitle('✨ Latest Soul Rest Entry')
+    //     .setDescription(`Here is the current grading breakdown for your entry.`)
+    //     .addFields(
+    //         { name: '🆔 Entry ID', value: `${latest.id}`, inline: true },
+    //         { name: '⚔️ Knight Level', value: `${latest.knight_level}`, inline: true },
+    //         { name: '🏅 Medals', value: `${formatNumber(latest.total_medals)}`, inline: true },
+    //     )
+    //     .addFields(
+    //         { name: '📊 SR MPM', value: `**${formatNumber(latest.sr_mpm)}**`, inline: true },
+    //         { name: '📈 SR %', value: `**${Number(latest.estimated_sr_pct).toFixed(2)}%**`, inline: true },
+    //         { name: '⚡ Double SR %', value: `**${Number(latest.estimated_double_sr_pct).toFixed(2)}%**`, inline: true },
+    //     )
+    //     .addFields(
+    //         { 
+    //             name: '🏆 Grade Percentile', 
+    //             value: `**${grade}** *(among ${nearbyEntries.length} nearby ${nearbyEntries.length === '1' ? 'entry' : 'entries'})*`, 
+    //             inline: false 
+    //         }
+    //     )
+    //     .setTimestamp()
+    //     .setFooter(buildFooter());
 
     return interaction.reply({
-      embeds: [srEmbed],
+      embeds: [gradeEmbed],
       flags: MessageFlags.Ephemeral
     });
   },

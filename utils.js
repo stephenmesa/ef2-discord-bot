@@ -1,4 +1,5 @@
 const QuickChart = require('quickchart-js');
+const { EmbedBuilder } = require('discord.js');
 
 function parseCompactNumber(value) {
   if (value === undefined || value === null) return NaN;
@@ -303,6 +304,32 @@ function getEmbedColor() {
     return 0x5865F2; // Discord Blurple, or use a custom hex like '#7289da'
 }
 
+function buildGradeEmbed(record, grade, nearbyCount) {
+  return new EmbedBuilder()
+    .setColor(getEmbedColor())
+    .setTitle('✨ Latest Soul Rest Entry')
+    .setDescription(`Here is the current grading breakdown for your entry.`)
+    .addFields(
+        { name: '🆔 Entry ID', value: `${record.id}`, inline: true },
+        { name: '⚔️ Knight Level', value: `${record.knight_level}`, inline: true },
+        { name: '🏅 Medals', value: `${formatNumber(record.total_medals)}`, inline: true },
+    )
+    .addFields(
+        { name: '📊 SR MPM', value: `**${formatNumber(record.sr_mpm)}**`, inline: true },
+        { name: '📈 SR %', value: `**${Number(record.estimated_sr_pct).toFixed(2)}%**`, inline: true },
+        { name: '⚡ Double SR %', value: `**${Number(record.estimated_double_sr_pct).toFixed(2)}%**`, inline: true },
+    )
+    .addFields(
+        { 
+            name: '🏆 Grade Percentile', 
+            value: `**${grade}** *(among ${nearbyCount} nearby KL ${nearbyCount === 1 ? 'entry' : 'entries'})*`, 
+            inline: false 
+        }
+    )
+    .setTimestamp(record.created_at)
+    .setFooter(buildFooter());
+}
+
 module.exports = {
   parseCompactNumber,
   compactifyNumber,
@@ -317,4 +344,5 @@ module.exports = {
   buildProgressCsv,
   buildFooter,
   getEmbedColor,
+  buildGradeEmbed,
 };
