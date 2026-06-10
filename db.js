@@ -82,6 +82,31 @@ async function getLatestEntry(userId, type = 'sr') {
   return result.rows[0] || null;
 }
 
+async function getEntryByIdWithNeighbors(userId, type = 'sr', id) {
+  let latestRecordId;
+  // If id is not defined, grab the latest id for this userId and type
+  if (id === undefined || id === null) {
+    latestRecordId = await pool.query(
+      `SELECT id FROM progress WHERE user_id = $1 AND entry_type = $2 ORDER BY created_at DESC LIMIT 1;`,
+      [userId, normalizeEntryType(type)]
+    );
+  }
+
+  const recordId = id ?? latestRecordId.rows[0]?.id;
+
+  // Grab the entry by ID and also the ID of the previous and next entries for navigation purposes
+  const result = await pool.query(
+    `SELECT 
+      p.*,
+      (SELECT id FROM progress WHERE user_id = $1 AND entry_type = $2 AND created_at < p.created_at ORDER BY created_at DESC LIMIT 1) AS prev_id,
+      (SELECT id FROM progress WHERE user_id = $1 AND entry_type = $2 AND created_at > p.created_at ORDER BY created_at ASC LIMIT 1) AS next_id
+     FROM progress p
+     WHERE p.user_id = $1 AND p.entry_type = $2 AND p.id = $3;`,
+    [userId, normalizeEntryType(type), recordId]
+  );
+  return result.rows[0] || null;
+}
+
 async function getAllEntries(userId, type = 'sr', limit = 200) {
   const result = await pool.query(
     `SELECT * FROM progress WHERE user_id = $1 AND entry_type = $2 ORDER BY created_at ASC LIMIT $3;`,
@@ -161,6 +186,7 @@ module.exports = {
   initDatabase,
   insertProgress,
   getLatestEntry,
+  getEntryByIdWithNeighbors,
   getAllEntries,
   getNearbyEntries,
   deleteLatestEntry,

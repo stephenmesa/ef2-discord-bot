@@ -295,6 +295,14 @@ function buildProgressCsv(rows) {
   return Buffer.from(lines.join('\n'), 'utf8');
 }
 
+function buildFooter() {
+    return { text: 'EF2Bot by @stephenmesa' };
+}
+
+function getEmbedColor() {
+    return 0x5865F2; // Discord Blurple, or use a custom hex like '#7289da'
+}
+
 module.exports = {
   parseCompactNumber,
   compactifyNumber,
@@ -307,4 +315,6 @@ module.exports = {
   computePercentile,
   buildChartBuffer,
   buildProgressCsv,
+  buildFooter,
+  getEmbedColor,
 };

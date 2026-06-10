@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, AttachmentBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, AttachmentBuilder, REST, Routes, MessageFlags } = require('discord.js');
 const db = require('./db');
 const utils = require('./utils');
 const commandLoader = require('./commands');
@@ -125,14 +125,14 @@ client.on('interactionCreate', async (interaction) => {
   if (cooldownRemaining > 0) {
     return interaction.reply({
       content: `Please wait ${cooldownRemaining}s before using that command again.`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   if (command.adminOnly && !isAdmin(interaction.user.id)) {
     return interaction.reply({
       content: 'You do not have permission to use that command.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -145,7 +145,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error(`Command ${command.name} execution failed:`, error);
     const response = {
       content: 'Something went wrong while running that command. Please try again later.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     };
     if (interaction.replied) {
       return interaction.editReply(response);

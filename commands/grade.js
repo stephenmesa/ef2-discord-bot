@@ -1,5 +1,5 @@
 const { MessageFlags, EmbedBuilder } = require('discord.js');
-const { formatNumber } = require('../utils');
+const { formatNumber, getEmbedColor, buildFooter } = require('../utils');
 
 module.exports = {
   name: 'grade',
@@ -30,7 +30,7 @@ module.exports = {
     const grade = computePercentile(Number(latest.estimated_sr_pct), scores);
 
     const srEmbed = new EmbedBuilder()
-        .setColor(0x5865F2) // Discord Blurple, or use a custom hex like '#7289da'
+        .setColor(getEmbedColor())
         .setTitle('✨ Latest Soul Rest Entry')
         .setDescription(`Here is the current grading breakdown for your entry.`)
         .addFields(
@@ -51,7 +51,7 @@ module.exports = {
             }
         )
         .setTimestamp()
-        .setFooter({ text: 'EF2Bot by @stephenmesa' });
+        .setFooter(buildFooter());
 
     return interaction.reply({
       embeds: [srEmbed],
