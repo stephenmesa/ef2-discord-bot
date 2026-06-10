@@ -29,29 +29,6 @@ module.exports = {
     const grade = computePercentile(Number(latest.estimated_sr_pct), scores);
 
     const gradeEmbed = buildGradeEmbed(latest, grade, nearbyEntries.length);
-    // const srEmbed = new EmbedBuilder()
-    //     .setColor(getEmbedColor())
-    //     .setTitle('✨ Latest Soul Rest Entry')
-    //     .setDescription(`Here is the current grading breakdown for your entry.`)
-    //     .addFields(
-    //         { name: '🆔 Entry ID', value: `${latest.id}`, inline: true },
-    //         { name: '⚔️ Knight Level', value: `${latest.knight_level}`, inline: true },
-    //         { name: '🏅 Medals', value: `${formatNumber(latest.total_medals)}`, inline: true },
-    //     )
-    //     .addFields(
-    //         { name: '📊 SR MPM', value: `**${formatNumber(latest.sr_mpm)}**`, inline: true },
-    //         { name: '📈 SR %', value: `**${Number(latest.estimated_sr_pct).toFixed(2)}%**`, inline: true },
-    //         { name: '⚡ Double SR %', value: `**${Number(latest.estimated_double_sr_pct).toFixed(2)}%**`, inline: true },
-    //     )
-    //     .addFields(
-    //         { 
-    //             name: '🏆 Grade Percentile', 
-    //             value: `**${grade}** *(among ${nearbyEntries.length} nearby ${nearbyEntries.length === '1' ? 'entry' : 'entries'})*`, 
-    //             inline: false 
-    //         }
-    //     )
-    //     .setTimestamp()
-    //     .setFooter(buildFooter());
 
     return interaction.reply({
       embeds: [gradeEmbed],

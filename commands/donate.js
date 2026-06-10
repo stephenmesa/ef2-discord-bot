@@ -3,7 +3,7 @@ const { MessageFlags } = require('discord.js');
 module.exports = {
   name: 'donate',
   aliases: ['donation', 'donations'],
-  description: 'Shows donation instructions and the configured donation URL.',
+  description: 'Learn how to donate to help support the bot.',
   slashOptions: [],
   async execute(interaction, args, context) {
     const { donationUrl } = context;
