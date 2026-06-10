@@ -4,10 +4,10 @@ const { EmbedBuilder } = require('discord.js');
 function parseCompactNumber(value) {
   if (value === undefined || value === null) return NaN;
 
-  const raw = String(value).trim().toLowerCase();
+  const raw = String(value).trim().toLowerCase().replace(/,/g, '.');
   if (raw.length === 0) return NaN;
 
-  const numeric = Number(raw.replace(/,/g, ''));
+  const numeric = Number(raw);
   if (!Number.isNaN(numeric)) {
     return numeric;
   }
