@@ -30,7 +30,7 @@ async function initDatabase() {
       estimated_double_sr_pct NUMERIC NOT NULL,
       notes TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      rebirth_medal_bonus TEXT
+      rebirth_medal_bonus NUMERIC
     );
   `);
   await pool.query(`
@@ -43,7 +43,7 @@ async function initDatabase() {
     CREATE INDEX IF NOT EXISTS progress_knight_level_idx ON progress (knight_level);
   `);
   await pool.query(`
-    ALTER TABLE progress ADD COLUMN IF NOT EXISTS rebirth_medal_bonus TEXT;
+    ALTER TABLE progress ADD COLUMN IF NOT EXISTS rebirth_medal_bonus NUMERIC;
   `);
 }
 
