@@ -29,7 +29,8 @@ async function initDatabase() {
       estimated_sr_pct NUMERIC NOT NULL,
       estimated_double_sr_pct NUMERIC NOT NULL,
       notes TEXT,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      rebirthMedalBonus TEXT
     );
   `);
   await pool.query(`
@@ -40,6 +41,9 @@ async function initDatabase() {
   `);
   await pool.query(`
     CREATE INDEX IF NOT EXISTS progress_knight_level_idx ON progress (knight_level);
+  `);
+  await pool.query(`
+    ALTER TABLE progress ADD COLUMN IF NOT EXISTS rebirthMedalBonus TEXT;
   `);
 }
 
@@ -62,13 +66,14 @@ async function insertProgress(entry) {
     estimatedSrPct,
     estimatedDoubleSrPct,
     notes,
+    rebirthMedalBonus
   } = entry;
 
   const result = await pool.query(
-    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirthMedalBonus)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *;`,
-    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null]
+    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null]
   );
 
   return result.rows[0];

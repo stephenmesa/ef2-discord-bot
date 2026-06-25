@@ -24,6 +24,12 @@ module.exports = {
       type: 3, // STRING
       required: true,
     },
+    {
+      name: 'medal_buff_percent',
+      description: 'Your rebirth medal bonus percentage. (e.g. 1282 for 1282%)',
+      type: 3, // STRING
+      required: false,
+    },
   ],
   async execute(interaction, args, context) {
     const { db } = context;
@@ -31,9 +37,11 @@ module.exports = {
     const knightLevel = args[0];
     const totalMedalsArg = args[1];
     const srMpmArg = args[2];
+    const rebirthMedalBonus = args[3];
 
     const totalMedalsValue = parseCompactNumber(totalMedalsArg);
     const srMpmValue = parseCompactNumber(srMpmArg);
+    const rebirthMedalBonusValue = Number(rebirthMedalBonus);
     const totalMedals = compactifyNumber(totalMedalsArg);
     const srMpm = compactifyNumber(srMpmArg);
 
@@ -45,6 +53,9 @@ module.exports = {
     }
     if (!Number.isFinite(srMpmValue) || srMpmValue <= 0) {
       return interaction.reply({ content: 'SR mpm must be a positive number.', flags: MessageFlags.Ephemeral });
+    }
+    if (!!rebirthMedalBonus && (!Number.isFinite(rebirthMedalBonusValue) || rebirthMedalBonusValue <= 0)) {
+      return interaction.reply({ content: 'Medal buff percent must be a positive number.', flags: MessageFlags.Ephemeral });
     }
 
     const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
@@ -63,6 +74,7 @@ module.exports = {
       srMpm,
       estimatedSrPct,
       estimatedDoubleSrPct,
+      rebirthMedalBonus,
     });
 
     const lines = [
