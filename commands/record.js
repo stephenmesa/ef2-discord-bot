@@ -65,6 +65,16 @@ module.exports = {
     const estimatedSrPct = (medalsGained / totalMedalsValue) * 100;
     const estimatedDoubleSrPct = ((medalsGained * 2) / totalMedalsValue) * 100;
 
+    let normalizedEstimatedSrPct;
+    let normalizedEstimatedDoubleSrPct;
+
+    // Optionally calculate normalized SR Percent if Rebirth Medal Bonus is provided
+    if (!!rebirthMedalBonus) {
+      const normalizedMedalsGained = (srMpmValue / rebirthMedalBonusValue) * totalMinutes * srEfficiency;
+      normalizedEstimatedSrPct = (normalizedMedalsGained / totalMedalsValue) * 100;
+      normalizedEstimatedDoubleSrPct = ((normalizedMedalsGained * 2) / totalMedalsValue) * 100;
+    }
+
     const previous = await db.getLatestEntry(interaction.user.id, 'sr');
     const entry = await db.insertProgress({
       userId: interaction.user.id,
@@ -75,6 +85,8 @@ module.exports = {
       estimatedSrPct,
       estimatedDoubleSrPct,
       rebirthMedalBonus,
+      normalizedEstimatedSrPct,
+      normalizedEstimatedDoubleSrPct,
     });
 
     const lines = [

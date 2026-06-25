@@ -30,7 +30,9 @@ async function initDatabase() {
       estimated_double_sr_pct NUMERIC NOT NULL,
       notes TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-      rebirth_medal_bonus NUMERIC
+      rebirth_medal_bonus NUMERIC,
+      normalized_estimated_sr_pct NUMERIC,
+      normalized_estimated_double_sr_pct NUMERIC
     );
   `);
   await pool.query(`
@@ -43,7 +45,10 @@ async function initDatabase() {
     CREATE INDEX IF NOT EXISTS progress_knight_level_idx ON progress (knight_level);
   `);
   await pool.query(`
-    ALTER TABLE progress ADD COLUMN IF NOT EXISTS rebirth_medal_bonus NUMERIC;
+    ALTER TABLE progress
+    ADD COLUMN IF NOT EXISTS rebirth_medal_bonus NUMERIC,
+    ADD COLUMN IF NOT EXISTS normalized_estimated_sr_pct NUMERIC,
+    ADD COLUMN IF NOT EXISTS normalized_estimated_double_sr_pct NUMERIC;
   `);
 }
 
@@ -66,14 +71,16 @@ async function insertProgress(entry) {
     estimatedSrPct,
     estimatedDoubleSrPct,
     notes,
-    rebirthMedalBonus
+    rebirthMedalBonus,
+    normalizedEstimatedSrPct,
+    normalizedEstimatedDoubleSrPct,
   } = entry;
 
   const result = await pool.query(
-    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, normalized_estimated_sr_pct, normalized_estimated_double_sr_pct)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *;`,
-    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null]
+    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, normalizedEstimatedSrPct || null, normalizedEstimatedDoubleSrPct || null]
   );
 
   return result.rows[0];
