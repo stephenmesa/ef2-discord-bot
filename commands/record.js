@@ -83,6 +83,10 @@ module.exports = {
       `Doubled SR: ${estimatedDoubleSrPct.toFixed(2)}% (${compactifyNumber(medalsGained * 2)} medals gained)`,
     ];
 
+    if (!!rebirthMedalBonus) {
+      lines.push(`Medal Buff %: ${rebirthMedalBonus}%`);
+    }
+
     if (previous) {
       const klGain = knightLevel - Number(previous.knight_level);
       const previousMedals = parseCompactNumber(previous.total_medals);
