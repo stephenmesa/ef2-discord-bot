@@ -31,8 +31,9 @@ async function initDatabase() {
       notes TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       rebirth_medal_bonus NUMERIC,
-      normalized_estimated_sr_pct NUMERIC,
-      normalized_estimated_double_sr_pct NUMERIC
+      base_sr_mpm TEXT,
+      base_estimated_sr_pct NUMERIC,
+      base_estimated_double_sr_pct NUMERIC
     );
   `);
   await pool.query(`
@@ -47,8 +48,9 @@ async function initDatabase() {
   await pool.query(`
     ALTER TABLE progress
     ADD COLUMN IF NOT EXISTS rebirth_medal_bonus NUMERIC,
-    ADD COLUMN IF NOT EXISTS normalized_estimated_sr_pct NUMERIC,
-    ADD COLUMN IF NOT EXISTS normalized_estimated_double_sr_pct NUMERIC;
+    ADD COLUMN IF NOT EXISTS base_sr_mpm TEXT,
+    ADD COLUMN IF NOT EXISTS base_estimated_sr_pct NUMERIC,
+    ADD COLUMN IF NOT EXISTS base_estimated_double_sr_pct NUMERIC;
   `);
 }
 
@@ -72,15 +74,16 @@ async function insertProgress(entry) {
     estimatedDoubleSrPct,
     notes,
     rebirthMedalBonus,
-    normalizedEstimatedSrPct,
-    normalizedEstimatedDoubleSrPct,
+    baseSRMpm,
+    baseEstimatedSrPct,
+    baseEstimatedDoubleSrPct,
   } = entry;
 
   const result = await pool.query(
-    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, normalized_estimated_sr_pct, normalized_estimated_double_sr_pct)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, base_sr_mpm, base_estimated_sr_pct, base_estimated_double_sr_pct)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING *;`,
-    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, normalizedEstimatedSrPct || null, normalizedEstimatedDoubleSrPct || null]
+    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, baseSRMpm || null, baseEstimatedSrPct || null, baseEstimatedDoubleSrPct || null]
   );
 
   return result.rows[0];

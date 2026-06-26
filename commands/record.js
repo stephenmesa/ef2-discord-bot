@@ -65,14 +65,18 @@ module.exports = {
     const estimatedSrPct = (medalsGained / totalMedalsValue) * 100;
     const estimatedDoubleSrPct = ((medalsGained * 2) / totalMedalsValue) * 100;
 
-    let normalizedEstimatedSrPct;
-    let normalizedEstimatedDoubleSrPct;
+    let baseEstimatedSrPct;
+    let baseEstimatedDoubleSrPct;
+    let baseSRMpm;
+    let baseSRMpmValue;
 
     // Optionally calculate normalized SR Percent if Rebirth Medal Bonus is provided
     if (!!rebirthMedalBonus) {
-      const normalizedMedalsGained = (srMpmValue / rebirthMedalBonusValue) * totalMinutes * srEfficiency;
-      normalizedEstimatedSrPct = (normalizedMedalsGained / totalMedalsValue) * 100;
-      normalizedEstimatedDoubleSrPct = ((normalizedMedalsGained * 2) / totalMedalsValue) * 100;
+      baseSRMpmValue = srMpmValue / (1 + rebirthMedalBonusValue / 100);
+      baseSRMpm = compactifyNumber(baseSRMpmValue);
+      const baseMedalsGained = baseSRMpmValue * totalMinutes * srEfficiency;
+      baseEstimatedSrPct = (baseMedalsGained / totalMedalsValue) * 100;
+      baseEstimatedDoubleSrPct = ((baseMedalsGained * 2) / totalMedalsValue) * 100;
     }
 
     const previous = await db.getLatestEntry(interaction.user.id, 'sr');
@@ -85,18 +89,21 @@ module.exports = {
       estimatedSrPct,
       estimatedDoubleSrPct,
       rebirthMedalBonus,
-      normalizedEstimatedSrPct,
-      normalizedEstimatedDoubleSrPct,
+      baseSRMpm,
+      baseEstimatedSrPct,
+      baseEstimatedDoubleSrPct,
     });
 
     const lines = [
       `Recorded SR progress for KL ${knightLevel}.`,
       `Estimated SR: ${estimatedSrPct.toFixed(2)}% (${compactifyNumber(medalsGained)} medals gained)`,
       `Doubled SR: ${estimatedDoubleSrPct.toFixed(2)}% (${compactifyNumber(medalsGained * 2)} medals gained)`,
+      `MPM: ${srMpm}`,
     ];
 
     if (!!rebirthMedalBonus) {
       lines.push(`Medal Buff %: ${rebirthMedalBonus}%`);
+      lines.push(`Base MPM: ${baseSRMpm}`);
     }
 
     if (previous) {
