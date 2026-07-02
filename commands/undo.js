@@ -16,7 +16,7 @@ module.exports = {
     return interaction.reply({ content: [
       'Deleted latest SR entry:',
       formatEntry(deleted),
-      `Recorded ${formatAge(deleted.created_at)}.`,
+      `Recorded ${formatAge(deleted.createdAt)}.`,
     ].join('\n'), flags: MessageFlags.Ephemeral });
   },
 };

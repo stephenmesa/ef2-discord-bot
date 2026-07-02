@@ -32,12 +32,12 @@ const generateEmbed = (currentEntry) =>
     .setDescription(`Here is your record.`)
     .addFields(
         { name: '🆔 Entry ID', value: `${currentEntry.id}`, inline: true },
-        { name: '⚔️ Knight Level', value: `${currentEntry.knight_level}`, inline: true },
-        { name: '🏅 Medals', value: `${formatNumber(currentEntry.total_medals)}`, inline: true },
-        { name: '⏱️ SR mpm', value: `${formatNumber(currentEntry.sr_mpm)}`, inline: true },
-        { name: '📊 Estimated SR %', value: `${formatNumber(currentEntry.estimated_sr_pct)}%`, inline: true },
+        { name: '⚔️ Knight Level', value: `${currentEntry.knightLevel}`, inline: true },
+        { name: '🏅 Medals', value: `${formatNumber(currentEntry.totalMedals)}`, inline: true },
+        { name: '⏱️ SR mpm', value: `${formatNumber(currentEntry.srMpm)}`, inline: true },
+        { name: '📊 Estimated SR %', value: `${formatNumber(currentEntry.estimatedSrPercent)}%`, inline: true },
     )
-    .setTimestamp(currentEntry.created_at)
+    .setTimestamp(currentEntry.createdAt)
     .setFooter(buildFooter());
 
 module.exports = {

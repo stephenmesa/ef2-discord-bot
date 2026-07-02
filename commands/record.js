@@ -1,5 +1,12 @@
 const { MessageFlags } = require('discord.js');
-const { formatNumber, compactifyNumber, parseCompactNumber, getPercentile, validatePercentage} = require('../utils');
+const {
+  formatNumber,
+  compactifyNumber,
+  parseCompactNumber,
+  getPercentile,
+  validatePercentage,
+  calculateBaseMpm,
+} = require('../utils');
 
 module.exports = {
   name: 'record',
@@ -107,20 +114,20 @@ module.exports = {
     }
 
     if (previous) {
-      const klGain = knightLevel - Number(previous.knight_level);
-      const previousMedals = parseCompactNumber(previous.total_medals);
+      const klGain = knightLevel - Number(previous.knightLevel);
+      const previousMedals = parseCompactNumber(previous.totalMedals);
       const medalChange = totalMedalsValue - previousMedals;
       const medalGainPercent = previousMedals > 0
         ? ((totalMedalsValue - previousMedals) / previousMedals) * 100
         : 0;
-      lines.push(`Previous entry was KL ${previous.knight_level} with ${formatNumber(previous.total_medals)} medals.`);
+      lines.push(`Previous entry was KL ${previous.knightLevel} with ${formatNumber(previous.totalMedals)} medals.`);
       lines.push(`KL gain: ${klGain >= 0 ? '+' : ''}${klGain}`);
       lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${compactifyNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
     }
 
     const nearbyEntries = await db.getNearbyEntries('sr', knightLevel, 1, entry.id);
     if (nearbyEntries.length > 0) {
-      const allPercentages = nearbyEntries.map((row) => Number(row.estimated_sr_pct)).filter(validatePercentage);
+      const allPercentages = nearbyEntries.map((row) => Number(row.estimatedSrPercent)).filter(validatePercentage);
       const scoreDecimal = getPercentile(allPercentages, estimatedSrPct);
       const score = Math.round(scoreDecimal);
 
