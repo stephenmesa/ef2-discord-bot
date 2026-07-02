@@ -158,6 +158,7 @@ async function buildChartBuffer(entries, mode = 'combined') {
   const datasets = [];
   const levels = entries.map((entry) => Number(entry.knight_level));
   const medals = entries.map((entry) => parseCompactNumber(entry.total_medals));
+  const mpmValues = entries.map((entry) => parseCompactNumber(entry.sr_mpm));
 
   if (mode === 'combined' || mode === 'kl') {
     datasets.push({
@@ -178,6 +179,18 @@ async function buildChartBuffer(entries, mode = 'combined') {
       borderColor: '#27ae60',
       backgroundColor: '#27ae60',
       yAxisID: mode === 'medals' ? 'y' : 'y1',
+      tension: 0.18,
+      fill: false,
+    });
+  }
+
+  if (mode === 'mpm') {
+    datasets.push({
+      label: 'MPM',
+      data: mpmValues,
+      borderColor: '#f2994a',
+      backgroundColor: '#f2994a',
+      yAxisID: 'y',
       tension: 0.18,
       fill: false,
     });
@@ -240,6 +253,24 @@ async function buildChartBuffer(entries, mode = 'combined') {
           position: 'left',
           scaleLabel: { display: true, labelString: 'Total Medals' },
           min: Math.max(1, Math.min(...medals.map((v) => Math.max(1, v)))),
+          ticks: {
+            callback: compactifyNumber,
+          },
+        },
+      ],
+    };
+  }
+
+  if (mode === 'mpm') {
+    options.scales = {
+      xAxes: options.scales.xAxes,
+      yAxes: [
+        {
+          id: 'y',
+          type: 'linear',
+          position: 'left',
+          scaleLabel: { display: true, labelString: 'MPM' },
+          min: Math.max(1, Math.min(...mpmValues.map((v) => Math.max(1, v)))),
           ticks: {
             callback: compactifyNumber,
           },
