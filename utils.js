@@ -403,42 +403,6 @@ function calculateSrPercentage(mpm, totalMedals, srEfficiency = 0.8) {
   return (medalsGained / totalMedals) * 100;
 }
 
-// function assessProgress(currentPercentage, comparableProgresses) {
-//   const normalizedProgresses = filterOutlierProgresses(comparableProgresses);
-//   const allPercentages = normalizedProgresses.map(p => p.percentage);
-
-//   const klProgresses = Object.groupBy(normalizedProgresses, ({ kl }) => kl);
-
-//   const kls = Object.fromEntries(
-//     Object.entries(klProgresses).map(([key, progresses]) => {
-//       const percentages = progresses.map(e => e.percentage);
-//       const percentageMin = Math.min(...percentages);
-//       const percentageMax = Math.max(...percentages);
-//       const n = progresses.length;
-
-//       return [
-//         key,
-//         {
-//           n,
-//           percentageMin: Number(percentageMin.toFixed(2)),
-//           percentageMax: Number(percentageMax.toFixed(2)),
-//         }
-//       ];
-//     })
-//   );
-
-//   let score = null;
-//   if (normalizedProgresses.length > 0) {
-//     const scoreDecimal = getPercentile(allPercentages, currentPercentage);
-//     score = Math.round(scoreDecimal);
-//   }
-
-//   return {
-//     kls,
-//     score,
-//   };
-// };
-
 function assessProgress(currentProgress, comparableProgresses) {
   const { percentage, basePercentage } = currentProgress;
 
