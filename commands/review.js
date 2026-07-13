@@ -25,8 +25,24 @@ const generateActionRow = (currentEntry) =>
         .setDisabled(currentEntry.next_id === null)
   );
 
-const generateEmbed = (currentEntry) =>
-  new EmbedBuilder()
+const generateEmbed = (currentEntry) => {
+  const baseMPMFields = [];
+  if (currentEntry.rebirthMedalBonus) {
+    baseMPMFields.push({
+      name: 'Medal Buff %',
+      value: `${currentEntry.rebirthMedalBonus}%`,
+      inline: true,
+    });
+  }
+  if (currentEntry.baseSrMpm) {
+    baseMPMFields.push({
+      name: 'Base SR mpm',
+      value: `${formatNumber(currentEntry.baseSrMpm)}`,
+      inline: true,
+    });
+  }
+
+  return new EmbedBuilder()
     .setColor(getEmbedColor())
     .setTitle('✨ Soul Rest Entry')
     .setDescription(`Here is your record.`)
@@ -36,9 +52,11 @@ const generateEmbed = (currentEntry) =>
         { name: '🏅 Medals', value: `${formatNumber(currentEntry.totalMedals)}`, inline: true },
         { name: '⏱️ SR mpm', value: `${formatNumber(currentEntry.srMpm)}`, inline: true },
         { name: '📊 Estimated SR %', value: `${formatNumber(currentEntry.estimatedSrPercent)}%`, inline: true },
+        ...baseMPMFields,
     )
     .setTimestamp(currentEntry.createdAt)
     .setFooter(buildFooter());
+};
 
 module.exports = {
   name: 'review',

@@ -306,6 +306,7 @@ function buildProgressCsv(rows) {
       Number(row.estimatedSrPercent).toFixed(2),
       Number(row.estimatedSrPercentDouble).toFixed(2),
       new Date(row.createdAt).toISOString(),
+      row.rebirthMedalBonus,
       row.baseSrMpm,
       Number(row.estimatedBaseSrPercent).toFixed(2),
       Number(row.estimatedBaseSrPercentDouble).toFixed(2),
