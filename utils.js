@@ -322,8 +322,8 @@ function buildProgressCsv(rows) {
       new Date(row.createdAt).toISOString(),
       row.rebirthMedalBonus,
       row.baseSrMpm,
-      Number(row.estimatedBaseSrPercent).toFixed(2),
-      Number(row.estimatedBaseSrPercentDouble).toFixed(2),
+      row.baseEstimatedSrPercent ? Number(row.baseEstimatedSrPercent).toFixed(2) : null,
+      row.baseEstimatedSrPercentDouble ? Number(row.baseEstimatedSrPercentDouble).toFixed(2) : null,
     ];
     lines.push(values.map((value) => JSON.stringify(value)).join(','));
   }
