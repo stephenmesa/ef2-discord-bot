@@ -110,7 +110,7 @@ module.exports = {
 
     if (!!rebirthMedalBonus) {
       lines.push(`Medal Buff %: ${rebirthMedalBonus}%`);
-      lines.push(`Base MPM: ${baseSRMpm}`);
+      lines.push(`Base MPM: ${baseSRMpm} (This is your MPM without the medal buff %, for ease of comparing across players)`);
     }
 
     if (previous) {

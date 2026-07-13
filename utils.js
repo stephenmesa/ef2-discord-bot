@@ -315,8 +315,9 @@ function buildProgressCsv(rows) {
   return Buffer.from(lines.join('\n'), 'utf8');
 }
 
-function buildFooter() {
-    return { text: 'EF2Bot by @stephenmesa' };
+function buildFooter(showBaseDisclaimer = false) {
+  const baseDisclaimer = showBaseDisclaimer ? 'Note: Base SR MPM is your MPM without the medal buff %, for ease of comparing across players.\n' : '';
+  return { text: `${baseDisclaimer}EF2Bot by @stephenmesa` };
 }
 
 function getEmbedColor() {
@@ -344,7 +345,7 @@ function buildGradeEmbed(record, assessment) {
   }
 
   const baseFields = [];
-  if (assessment.baseScore) {
+  if (record.baseSrMpm) {
     baseFields.push({
       name: 'Base SR MPM',
       value: `**${formatNumber(record.baseSrMpm)}**`,
@@ -383,7 +384,7 @@ function buildGradeEmbed(record, assessment) {
         ...klFields,
     )
     .setTimestamp(record.createdAt)
-    .setFooter(buildFooter());
+    .setFooter(buildFooter(!!record.baseSrMpm));
 }
 
 function getPercentile(arr, num) {
