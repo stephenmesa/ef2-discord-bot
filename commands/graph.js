@@ -3,17 +3,18 @@ const { MessageFlags } = require('discord.js');
 module.exports = {
   name: 'graph',
   aliases: [],
-  description: 'Generates a progress chart PNG. Usage: graph [kl|medals]',
+  description: 'Generates a progress chart PNG. Usage: graph [kl|medals|mpm]',
   slashOptions: [
     {
       name: 'mode',
-      description: 'Chart mode: combined (default), kl, or medals',
+      description: 'Chart mode: combined kl + medals (default), kl, medals, or mpm',
       type: 3, // STRING
       required: false,
       choices: [
         { name: 'Combined', value: 'combined' },
         { name: 'Knight Level', value: 'kl' },
         { name: 'Medals', value: 'medals' },
+        { name: 'MPM', value: 'mpm' },
       ],
     },
   ],
@@ -22,7 +23,7 @@ module.exports = {
     const { AttachmentBuilder } = require('discord.js');
 
     const modeArg = args[0] || 'combined';
-    const mode = ['combined', 'kl', 'medals'].includes(modeArg) ? modeArg : 'combined';
+    const mode = ['combined', 'kl', 'medals', 'mpm'].includes(modeArg) ? modeArg : 'combined';
 
     const rows = await db.getAllEntries(interaction.user.id, 'sr', 200);
     if (!rows.length) {
