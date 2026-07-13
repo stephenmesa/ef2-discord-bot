@@ -294,7 +294,7 @@ async function buildChartBuffer(entries, mode = 'combined') {
 }
 
 function buildProgressCsv(rows) {
-  const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At', 'Base SR MPM', 'Estimated Base SR %', 'Doubled Base SR %'];
+  const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At', 'Rebirth Medal Bonus', 'Base SR MPM', 'Estimated Base SR %', 'Doubled Base SR %'];
   const lines = [header.join(',')];
   for (const row of rows) {
     const values = [
@@ -416,13 +416,20 @@ function filterOutlierBaseProgresses(records) {
 }
 
 function calculateBaseMpm(mpm, rebirthMedalBonus) {
-  const rebirthMedalBonusValue = Number(rebirthMedalBonus);
-  if (!rebirthMedalBonusValue || !Number.isFinite(rebirthMedalBonusValue)) {
-    // The rebirth medal bonus was not provided, and thus the base MPM cannot be calculated. Return early.
+  if (rebirthMedalBonus == null || mpm == null) {
     return null;
   }
 
   const srMpmValue = Number(mpm);
+  const rebirthMedalBonusValue = Number(rebirthMedalBonus);
+  if (!Number.isFinite(rebirthMedalBonusValue)
+    || !Number.isFinite(srMpmValue)
+    || rebirthMedalBonusValue < 0
+    || srMpmValue < 0) {
+    // The rebirth medal bonus was not provided, and thus the base MPM cannot be calculated. Return early.
+    return null;
+  }
+
   return srMpmValue / (1 + rebirthMedalBonusValue / 100);
 }
 
@@ -506,7 +513,7 @@ function assessProgress(currentProgress, comparableProgresses) {
     score,
     baseScore,
   };
-};
+}
 
 module.exports = {
   parseCompactNumber,

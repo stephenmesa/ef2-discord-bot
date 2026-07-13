@@ -79,7 +79,8 @@ module.exports = {
 
     // Optionally calculate normalized SR Percent if Rebirth Medal Bonus is provided
     if (!!rebirthMedalBonus) {
-      baseSRMpmValue = srMpmValue / (1 + rebirthMedalBonusValue / 100);
+      baseSRMpmValue = calculateBaseMpm(srMpmValue, rebirthMedalBonusValue);
+
       baseSRMpm = compactifyNumber(baseSRMpmValue);
       const baseMedalsGained = baseSRMpmValue * totalMinutes * srEfficiency;
       baseEstimatedSrPct = (baseMedalsGained / totalMedalsValue) * 100;

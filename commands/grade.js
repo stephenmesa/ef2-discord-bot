@@ -1,12 +1,7 @@
-const { MessageFlags, EmbedBuilder } = require('discord.js');
+const { MessageFlags } = require('discord.js');
 const {
-  formatNumber,
-  getEmbedColor,
-  buildFooter,
   buildGradeEmbed,
   assessProgress,
-  calculateSrPercentage,
-  calculateBaseMpm,
 } = require('../utils');
 
 module.exports = {
