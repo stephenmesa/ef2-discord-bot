@@ -212,7 +212,7 @@ async function deleteLatestEntry(userId, type = 'sr') {
     const deleted = latest.rows[0];
     await client.query(`DELETE FROM progress WHERE id = $1;`, [deleted.id]);
     await client.query('COMMIT');
-    return deleted;
+    return hydrateProgress(deleted);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

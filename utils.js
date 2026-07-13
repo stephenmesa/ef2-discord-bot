@@ -135,7 +135,21 @@ function formatAge(timestamp) {
 }
 
 function formatEntry(row) {
-  return `ID ${row.id} — KL ${row.knightLevel} — Medals ${formatNumber(row.totalMedals)} — SR mpm ${formatNumber(row.srMpm)} — SR ${Number(row.estimatedSrPercent).toFixed(2)}% — Double SR ${Number(row.estimatedSrPercentDouble).toFixed(2)}%`;
+  const dataPoints = [];
+
+  dataPoints.push(`ID ${row.id}`);
+  dataPoints.push(`KL ${row.knightLevel}`);
+  dataPoints.push(`Medals ${formatNumber(row.totalMedals)}`);
+  dataPoints.push(`SR mpm ${formatNumber(row.srMpm)}`);
+  dataPoints.push(`SR ${Number(row.estimatedSrPercent).toFixed(2)}%`);
+  dataPoints.push(`Double SR ${Number(row.estimatedSrPercentDouble).toFixed(2)}%`);
+  if (row.rebirthMedalBonus) {
+    dataPoints.push(`Rebirth Medal Bonus ${row.rebirthMedalBonus}%`);
+  }
+  if (row.baseSrMpm) {
+    dataPoints.push(`Base SR mpm ${row.baseSrMpm}`);
+  }
+  return dataPoints.join(' — ');
 }
 
 function parseEntryType(type) {
