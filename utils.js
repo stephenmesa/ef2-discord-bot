@@ -135,7 +135,21 @@ function formatAge(timestamp) {
 }
 
 function formatEntry(row) {
-  return `ID ${row.id} — KL ${row.knight_level} — Medals ${formatNumber(row.total_medals)} — SR mpm ${formatNumber(row.sr_mpm)} — SR ${Number(row.estimated_sr_pct).toFixed(2)}% — Double SR ${Number(row.estimated_double_sr_pct).toFixed(2)}%`;
+  const dataPoints = [];
+
+  dataPoints.push(`ID ${row.id}`);
+  dataPoints.push(`KL ${row.knightLevel}`);
+  dataPoints.push(`Medals ${formatNumber(row.totalMedals)}`);
+  dataPoints.push(`SR mpm ${formatNumber(row.srMpm)}`);
+  dataPoints.push(`SR ${Number(row.estimatedSrPercent).toFixed(2)}%`);
+  dataPoints.push(`Double SR ${Number(row.estimatedSrPercentDouble).toFixed(2)}%`);
+  if (row.rebirthMedalBonus) {
+    dataPoints.push(`Rebirth Medal Bonus ${row.rebirthMedalBonus}%`);
+  }
+  if (row.baseSrMpm) {
+    dataPoints.push(`Base SR mpm ${row.baseSrMpm}`);
+  }
+  return dataPoints.join(' — ');
 }
 
 function parseEntryType(type) {
@@ -151,14 +165,14 @@ async function buildChartBuffer(entries, mode = 'combined') {
   const width = 1000;
   const height = 540;
   const labels = entries.map((entry) => {
-    const date = new Date(entry.created_at);
+    const date = new Date(entry.createdAt);
     return date.toISOString().slice(0, 16).replace('T', ' ');
   });
 
   const datasets = [];
-  const levels = entries.map((entry) => Number(entry.knight_level));
-  const medals = entries.map((entry) => parseCompactNumber(entry.total_medals));
-  const mpmValues = entries.map((entry) => parseCompactNumber(entry.sr_mpm));
+  const levels = entries.map((entry) => Number(entry.knightLevel));
+  const medals = entries.map((entry) => parseCompactNumber(entry.totalMedals));
+  const mpmValues = entries.map((entry) => parseCompactNumber(entry.srMpm));
 
   if (mode === 'combined' || mode === 'kl') {
     datasets.push({
@@ -294,26 +308,31 @@ async function buildChartBuffer(entries, mode = 'combined') {
 }
 
 function buildProgressCsv(rows) {
-  const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At'];
+  const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At', 'Rebirth Medal Bonus', 'Base SR MPM', 'Estimated Base SR %', 'Doubled Base SR %'];
   const lines = [header.join(',')];
   for (const row of rows) {
     const values = [
       row.id,
-      row.entry_type,
-      row.knight_level,
-      row.total_medals,
-      row.sr_mpm,
-      Number(row.estimated_sr_pct).toFixed(2),
-      Number(row.estimated_double_sr_pct).toFixed(2),
-      new Date(row.created_at).toISOString(),
+      row.entryType,
+      row.knightLevel,
+      row.totalMedals,
+      row.srMpm,
+      Number(row.estimatedSrPercent).toFixed(2),
+      Number(row.estimatedSrPercentDouble).toFixed(2),
+      new Date(row.createdAt).toISOString(),
+      row.rebirthMedalBonus,
+      row.baseSrMpm,
+      row.baseEstimatedSrPercent ? Number(row.baseEstimatedSrPercent).toFixed(2) : null,
+      row.baseEstimatedSrPercentDouble ? Number(row.baseEstimatedSrPercentDouble).toFixed(2) : null,
     ];
     lines.push(values.map((value) => JSON.stringify(value)).join(','));
   }
   return Buffer.from(lines.join('\n'), 'utf8');
 }
 
-function buildFooter() {
-    return { text: 'EF2Bot by @stephenmesa' };
+function buildFooter(showBaseDisclaimer = false) {
+  const baseDisclaimer = showBaseDisclaimer ? 'Note: Base SR MPM is your MPM without the medal buff %, for ease of comparing across players.\n' : '';
+  return { text: `${baseDisclaimer}EF2Bot by @stephenmesa` };
 }
 
 function getEmbedColor() {
@@ -323,7 +342,7 @@ function getEmbedColor() {
 function buildGradeEmbed(record, assessment) {
   const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
   const totalMinutes = 4 * 60;
-  const medalsGained = parseCompactNumber(record.sr_mpm) * totalMinutes * srEfficiency;
+  const medalsGained = parseCompactNumber(record.srMpm) * totalMinutes * srEfficiency;
 
   const klFields = Object.entries(assessment.kls).map(([groupKL, klAssessment]) => ({
     name: `KL${groupKL} (${klAssessment.n} record${klAssessment.n > 1 ? 's' : ''})`,
@@ -331,9 +350,33 @@ function buildGradeEmbed(record, assessment) {
     inline: true,
   }));
 
-  const description = assessment.score
+  let description = assessment.score
     ? `Your SR grade is **${assessment.score}/100**`
     : 'Sorry, but your grade could not be calculated based on lack of data';
+
+  if (assessment.baseScore) {
+    description += `
+    Your Base SR grade is **${assessment.baseScore}/100**`;
+  }
+
+  const baseFields = [];
+  if (record.baseSrMpm) {
+    baseFields.push({
+      name: 'Base SR MPM',
+      value: `**${formatNumber(record.baseSrMpm)}**`,
+      inline: true,
+    });
+    baseFields.push({
+      name: 'Base SR %',
+      value: `**${Number(record.baseEstimatedSrPercent).toFixed(2)}%**`,
+      inline: true,
+    });
+    baseFields.push({
+      name: 'Base Double SR %',
+      value: `**${Number(record.baseEstimatedSrPercentDouble).toFixed(2)}%**`,
+      inline: true,
+    });
+  }
 
   return new EmbedBuilder()
     .setColor(getEmbedColor())
@@ -341,19 +384,22 @@ function buildGradeEmbed(record, assessment) {
     .setDescription(description)
     .addFields(
         { name: '🆔 Entry ID', value: `${record.id}`, inline: true },
-        { name: '⚔️ Knight Level', value: `${record.knight_level}`, inline: true },
-        { name: '🏅 Medals', value: `${formatNumber(record.total_medals)}`, inline: true },
+        { name: '⚔️ Knight Level', value: `${record.knightLevel}`, inline: true },
+        { name: '🏅 Medals', value: `${formatNumber(record.totalMedals)}`, inline: true },
     )
     .addFields(
-        { name: '📊 SR MPM', value: `**${formatNumber(record.sr_mpm)}**`, inline: true },
-        { name: '📈 SR %', value: `**${Number(record.estimated_sr_pct).toFixed(2)}%** (${compactifyNumber(medalsGained)} medals gained)`, inline: true },
-        { name: '⚡ Double SR %', value: `**${Number(record.estimated_double_sr_pct).toFixed(2)}%** (${compactifyNumber(medalsGained * 2)} medals gained)`, inline: true },
+        { name: '📊 SR MPM', value: `**${formatNumber(record.srMpm)}**`, inline: true },
+        { name: '📈 SR %', value: `**${Number(record.estimatedSrPercent).toFixed(2)}%** (${compactifyNumber(medalsGained)} medals gained)`, inline: true },
+        { name: '⚡ Double SR %', value: `**${Number(record.estimatedSrPercentDouble).toFixed(2)}%** (${compactifyNumber(medalsGained * 2)} medals gained)`, inline: true },
+    )
+    .addFields(
+      ...baseFields,
     )
     .addFields(
         ...klFields,
     )
-    .setTimestamp(record.created_at)
-    .setFooter(buildFooter());
+    .setTimestamp(record.createdAt)
+    .setFooter(buildFooter(!!record.baseSrMpm));
 }
 
 function getPercentile(arr, num) {
@@ -379,11 +425,45 @@ function filterOutlierProgresses(records) {
   return records.filter(record => validatePercentage(record.percentage));
 }
 
-function assessProgress(currentPercentage, comparableProgresses) {
-  const normalizedProgresses = filterOutlierProgresses(comparableProgresses);
-  const allPercentages = normalizedProgresses.map(p => p.percentage);
+function filterOutlierBaseProgresses(records) {
+  return records.filter(record => validatePercentage(record.basePercentage));
+}
 
-  const klProgresses = Object.groupBy(normalizedProgresses, ({ kl }) => kl);
+function calculateBaseMpm(mpm, rebirthMedalBonus) {
+  if (rebirthMedalBonus == null || mpm == null) {
+    return null;
+  }
+
+  const srMpmValue = Number(mpm);
+  const rebirthMedalBonusValue = Number(rebirthMedalBonus);
+  if (!Number.isFinite(rebirthMedalBonusValue)
+    || !Number.isFinite(srMpmValue)
+    || rebirthMedalBonusValue < 0
+    || srMpmValue < 0) {
+    // The rebirth medal bonus was not provided, and thus the base MPM cannot be calculated. Return early.
+    return null;
+  }
+
+  return srMpmValue / (1 + rebirthMedalBonusValue / 100);
+}
+
+function calculateSrPercentage(mpm, totalMedals, srEfficiency = 0.8) {
+  if (!mpm || !Number.isFinite(mpm) || !totalMedals | !Number.isFinite(totalMedals)) {
+    return null;
+  }
+  const totalMinutes = 4 * 60; // 4 hours
+  const medalsGained = mpm * totalMinutes * srEfficiency;
+
+  return (medalsGained / totalMedals) * 100;
+}
+
+function assessProgress(currentProgress, comparableProgresses) {
+  const { percentage, basePercentage } = currentProgress;
+
+  const filteredProgresses = filterOutlierProgresses(comparableProgresses);
+  const allPercentages = filteredProgresses.map(p => p.percentage);
+
+  const klProgresses = Object.groupBy(filteredProgresses, ({ kl }) => kl);
 
   const kls = Object.fromEntries(
     Object.entries(klProgresses).map(([key, progresses]) => {
@@ -403,17 +483,51 @@ function assessProgress(currentPercentage, comparableProgresses) {
     })
   );
 
+  const filteredBaseProgresses = filterOutlierBaseProgresses(comparableProgresses);
+  const allBasePercentages = filteredBaseProgresses.map(p => p.basePercentage);
+
+  const klBaseProgresses = Object.groupBy(filteredBaseProgresses, ({ kl }) => kl);
+
+  const baseKLs = Object.fromEntries(
+    Object.entries(klBaseProgresses).map(([key, progresses]) => {
+      const basePercentages = filteredBaseProgresses.map(e => e.basePercentage);
+      const basePercentageMin = Math.min(...basePercentages);
+      const basePercentageMax = Math.max(...basePercentages);
+      const n = filteredBaseProgresses.length;
+
+      return [
+        key,
+        {
+          n,
+          percentageMin: Number(basePercentageMin.toFixed(2)),
+          percentageMax: Number(basePercentageMax.toFixed(2)),
+        }
+      ];
+    })
+  );
+
+  // Calculate standard score
   let score = null;
-  if (normalizedProgresses.length > 0) {
-    const scoreDecimal = getPercentile(allPercentages, currentPercentage);
+  if (filteredProgresses.length > 0) {
+    const scoreDecimal = getPercentile(allPercentages, percentage);
     score = Math.round(scoreDecimal);
+  }
+
+  // Calculate optional base score
+  let baseScore = null;
+
+  // Only proceed if the current entry actually provided a valid medal bonus
+  if (Number.isFinite(basePercentage) && filteredBaseProgresses.length > 0) {
+    const baseScoreDecimal = getPercentile(allBasePercentages, basePercentage)
+    baseScore = Math.round(baseScoreDecimal);
   }
 
   return {
     kls,
     score,
+    baseScore,
   };
-};
+}
 
 module.exports = {
   parseCompactNumber,
@@ -432,4 +546,6 @@ module.exports = {
   filterOutlierProgresses,
   validatePercentage,
   getPercentile,
+  calculateBaseMpm,
+  calculateSrPercentage,
 };

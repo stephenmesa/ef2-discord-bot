@@ -1,5 +1,8 @@
-const { MessageFlags, EmbedBuilder } = require('discord.js');
-const { formatNumber, getEmbedColor, buildFooter, buildGradeEmbed, assessProgress } = require('../utils');
+const { MessageFlags } = require('discord.js');
+const {
+  buildGradeEmbed,
+  assessProgress,
+} = require('../utils');
 
 module.exports = {
   name: 'grade',
@@ -16,7 +19,7 @@ module.exports = {
 
     const nearbyEntries = await db.getNearbyEntries(
       'sr',
-      Number(latest.knight_level),
+      Number(latest.knightLevel),
       1,
       latest.id
     );
@@ -25,8 +28,15 @@ module.exports = {
       return interaction.reply({ content: 'No nearby KL entries found for grade comparison. Record more SR progress to build your grade profile.', flags: MessageFlags.Ephemeral });
     }
 
-    const progresses = nearbyEntries.map((row) => ({ kl: Number(row.knight_level), percentage: Number(row.estimated_sr_pct) }));
-    const assessment = assessProgress(latest.estimated_sr_pct, progresses);
+    const progresses = nearbyEntries.map((row) => ({ 
+      kl: Number(row.knightLevel),
+      percentage: row.estimatedSrPercent,
+      basePercentage: row.baseEstimatedSrPercent ? Number(row.baseEstimatedSrPercent) : null,
+    }));
+    const assessment = assessProgress({
+      percentage: latest.estimatedSrPercent,
+      basePercentage: latest.baseEstimatedSrPercent ? Number(latest.baseEstimatedSrPercent) : null,
+    }, progresses);
 
     const gradeEmbed = buildGradeEmbed(latest, assessment);
 

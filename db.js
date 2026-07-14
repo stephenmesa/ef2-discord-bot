@@ -1,4 +1,10 @@
 const { Pool } = require('pg');
+const {
+  calculateSrPercentage,
+  parseCompactNumber,
+  calculateBaseMpm,
+  compactifyNumber,
+} = require('./utils');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -29,7 +35,11 @@ async function initDatabase() {
       estimated_sr_pct NUMERIC NOT NULL,
       estimated_double_sr_pct NUMERIC NOT NULL,
       notes TEXT,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      rebirth_medal_bonus NUMERIC,
+      base_sr_mpm TEXT,
+      base_estimated_sr_pct NUMERIC,
+      base_estimated_double_sr_pct NUMERIC
     );
   `);
   await pool.query(`
@@ -40,6 +50,13 @@ async function initDatabase() {
   `);
   await pool.query(`
     CREATE INDEX IF NOT EXISTS progress_knight_level_idx ON progress (knight_level);
+  `);
+  await pool.query(`
+    ALTER TABLE progress
+    ADD COLUMN IF NOT EXISTS rebirth_medal_bonus NUMERIC,
+    ADD COLUMN IF NOT EXISTS base_sr_mpm TEXT,
+    ADD COLUMN IF NOT EXISTS base_estimated_sr_pct NUMERIC,
+    ADD COLUMN IF NOT EXISTS base_estimated_double_sr_pct NUMERIC;
   `);
 }
 
@@ -62,16 +79,20 @@ async function insertProgress(entry) {
     estimatedSrPct,
     estimatedDoubleSrPct,
     notes,
+    rebirthMedalBonus,
+    baseSRMpm,
+    baseEstimatedSrPct,
+    baseEstimatedDoubleSrPct,
   } = entry;
 
   const result = await pool.query(
-    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, base_sr_mpm, base_estimated_sr_pct, base_estimated_double_sr_pct)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING *;`,
-    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null]
+    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, baseSRMpm || null, baseEstimatedSrPct || null, baseEstimatedDoubleSrPct || null]
   );
 
-  return result.rows[0];
+  return hydrateProgress(result.rows[0]);
 }
 
 async function getLatestEntry(userId, type = 'sr') {
@@ -79,7 +100,7 @@ async function getLatestEntry(userId, type = 'sr') {
     `SELECT * FROM progress WHERE user_id = $1 AND entry_type = $2 ORDER BY created_at DESC LIMIT 1;`,
     [userId, normalizeEntryType(type)]
   );
-  return result.rows[0] || null;
+  return hydrateProgress(result.rows[0]) || null;
 }
 
 async function getEntryByIdWithNeighbors(userId, type = 'sr', id) {
@@ -104,7 +125,55 @@ async function getEntryByIdWithNeighbors(userId, type = 'sr', id) {
      WHERE p.user_id = $1 AND p.entry_type = $2 AND p.id = $3;`,
     [userId, normalizeEntryType(type), recordId]
   );
-  return result.rows[0] || null;
+  return hydrateProgress(result.rows[0]) || null;
+}
+
+function hydrateProgress(progress) {
+  if (!progress || typeof progress !== 'object' || Array.isArray(progress)) {
+    return null;
+  }
+
+  const {
+    id,
+    user_id: userId,
+    entry_type: entryType,
+    knight_level: knightLevel,
+    total_medals: totalMedals,
+    sr_mpm: srMpm,
+    notes,
+    created_at: createdAt,
+    rebirth_medal_bonus: rebirthMedalBonus,
+  } = progress;
+
+  const srMpmValue = parseCompactNumber(srMpm);
+  const totalMedalsValue = parseCompactNumber(totalMedals);
+  const estimatedSrPercent = calculateSrPercentage(srMpmValue, totalMedalsValue);
+  const baseSrMpmValue = calculateBaseMpm(srMpmValue, rebirthMedalBonus);
+  const baseEstimatedSrPercent = calculateSrPercentage(baseSrMpmValue, totalMedalsValue);
+
+  return {
+    id,
+    userId,
+    entryType,
+    knightLevel,
+    totalMedals,
+    srMpm,
+    estimatedSrPercent: Number(estimatedSrPercent.toFixed(2)),
+    estimatedSrPercentDouble: Number((estimatedSrPercent * 2).toFixed(2)),
+    notes,
+    createdAt,
+    rebirthMedalBonus,
+    baseSrMpm: compactifyNumber(baseSrMpmValue),
+    baseEstimatedSrPercent: baseEstimatedSrPercent ? Number(baseEstimatedSrPercent.toFixed(2)) : null,
+    baseEstimatedSrPercentDouble: baseEstimatedSrPercent ? Number((baseEstimatedSrPercent * 2).toFixed(2)) : null,
+  };
+}
+
+function hydrateProgresses(progresses) {
+  if (!progresses || !Array.isArray(progresses)) {
+    return [];
+  }
+  return progresses.map(hydrateProgress).filter(p => p != null);
 }
 
 async function getAllEntries(userId, type = 'sr', limit = 200) {
@@ -112,7 +181,7 @@ async function getAllEntries(userId, type = 'sr', limit = 200) {
     `SELECT * FROM progress WHERE user_id = $1 AND entry_type = $2 ORDER BY created_at ASC LIMIT $3;`,
     [userId, normalizeEntryType(type), limit]
   );
-  return result.rows;
+  return result.rows.map(hydrateProgress).filter(r => !!r);
 }
 
 async function getNearbyEntries(type = 'sr', knightLevel, range = 5, excludeId = null, limit = 200) {
@@ -125,7 +194,7 @@ async function getNearbyEntries(type = 'sr', knightLevel, range = 5, excludeId =
   query += ` ORDER BY knight_level ASC, created_at ASC LIMIT $4;`;
 
   const result = await pool.query(query, params);
-  return result.rows;
+  return result.rows.map(hydrateProgress).filter(r => !!r);
 }
 
 async function deleteLatestEntry(userId, type = 'sr') {
@@ -143,7 +212,7 @@ async function deleteLatestEntry(userId, type = 'sr') {
     const deleted = latest.rows[0];
     await client.query(`DELETE FROM progress WHERE id = $1;`, [deleted.id]);
     await client.query('COMMIT');
-    return deleted;
+    return hydrateProgress(deleted);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -192,4 +261,5 @@ module.exports = {
   deleteLatestEntry,
   deleteEntryById,
   getStats,
+  hydrateProgress,
 };

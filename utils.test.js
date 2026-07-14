@@ -1,4 +1,82 @@
-const { parseCompactNumber, compactifyNumber } = require('./utils');
+const { parseCompactNumber, compactifyNumber, calculateBaseMpm } = require('./utils');
+
+describe('calculateBaseMpm', () => {
+  describe('Happy path scenarios', () => {
+    test('calculates for zero bonus', () => {
+      const mpm = 50;
+      const bonus = 0;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toEqual(50);
+    });
+    test('calculates for 100 bonus', () => {
+      const mpm = 100;
+      const bonus = 100;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toEqual(50);
+    });
+    test('calculates for 1000 bonus', () => {
+      const mpm = 550;
+      const bonus = 1000;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toEqual(50);
+    });
+  });
+  describe('Edge cases', () => {
+    test('negative bonus', () => {
+      const mpm = 550;
+      const bonus = -100;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toBeNull();
+    });
+    test('negative mpm', () => {
+      const mpm = -550;
+      const bonus = 100;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toBeNull();
+    });
+    test('null bonus', () => {
+      const mpm = 550;
+      const bonus = null;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toBeNull();
+    });
+    test('undefined bonus', () => {
+      const mpm = 550;
+
+      const target = calculateBaseMpm(mpm, undefined);
+
+      expect(target).toBeNull();
+    });
+    test('null mpm', () => {
+      const mpm = null;
+      const bonus = 100;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toBeNull();
+    });
+    test('undefined mpm', () => {
+      const mpm = undefined;
+      const bonus = 100;
+
+      const target = calculateBaseMpm(mpm, bonus);
+
+      expect(target).toBeNull();
+    });
+  });
+});
 
 describe('parseCompactNumber', () => {
   describe('plain numbers', () => {
