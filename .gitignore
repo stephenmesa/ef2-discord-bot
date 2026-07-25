@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Ignore generated credentials from google-github-actions/auth
+gha-creds-*.json
