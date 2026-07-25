@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, AttachmentBuilder, REST, Routes, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, AttachmentBuilder, REST, Routes, MessageFlags, ActivityType } = require('discord.js');
 const db = require('./db');
 const utils = require('./utils');
 const commandLoader = require('./commands');
@@ -17,6 +17,8 @@ const adminUserIds = new Set(
     .map((value) => value.trim())
     .filter(Boolean)
 );
+
+const versionString = process.env.BOT_VERSION || '1.0.0';
 
 if (!token) {
   console.error('Missing DISCORD_TOKEN. Set this environment variable before starting.');
@@ -102,6 +104,14 @@ client.on('clientReady', async () => {
     console.log(`Logged in as ${client.user.tag}`);
     console.log(`Connected to ${client.guilds.cache.size} guild(s): ${client.guilds.cache.map((guild) => guild.name).join(', ') || 'none'}`);
     client.user.setActivity(botStatus, { type: 'WATCHING' });
+    client.user.setPresence({
+      activities: [{
+        name: 'custom',
+        type: ActivityType.Custom,
+        state: `v${versionString}`,
+      }],
+      status: 'online'
+    })
     await registerSlashCommands();
 
     if (maintenanceChannelIds.length) {

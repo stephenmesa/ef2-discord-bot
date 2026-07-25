@@ -1,0 +1,48 @@
+name: Manual Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Select the type of version bump'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+# Required to allow the Action to push commits and tags back to your repo
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Required to fetch full history so the bot can push successfully
+          fetch-depth: 0 
+          # Ensure you are on the main branch, not a detached head
+          ref: main 
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Configure Git User
+        # npm requires a Git user to be configured to create the commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump Version
+        run: npm version ${{ github.event.inputs.bump_type }}
+
+      - name: Push Commits and Tags
+        run: |
+          git push origin main
+          git push --tags
