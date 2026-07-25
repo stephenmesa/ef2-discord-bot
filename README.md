@@ -22,6 +22,9 @@ Optional:
 - `BOT_STATUS` - Status text displayed on bot startup.
 - `COOLDOWN_SECONDS` - Rate limit per user per command (default `3`).
 - `DB_SSL` - Set to `true` to enable TLS for the database connection.
+- `MAINTENANCE_CHANNEL_IDS` - Comma-separated Discord channel IDs that receive maintenance status updates.
+- `MAINTENANCE_CHECK_INTERVAL_SECONDS` - How often to poll the maintenance endpoint (default `300`, which is 5 minutes).
+- `SERVER_STATUS_BASEURL` - Base URL for the server to fetch the maintenance status.
 
 ## Commands
 
