@@ -3,11 +3,14 @@ const { Client, GatewayIntentBits, Partials, AttachmentBuilder, REST, Routes, Me
 const db = require('./db');
 const utils = require('./utils');
 const commandLoader = require('./commands');
+const { createMaintenanceMonitor, parseChannelIds, parseCheckIntervalSeconds } = require('./maintenanceMonitor');
 
 const token = process.env.DISCORD_TOKEN;
 const donationUrl = process.env.DONATION_URL || 'https://example.com/donate';
 const botStatus = process.env.BOT_STATUS || 'tracking EF2 SR progress';
 const cooldownSeconds = Number(process.env.COOLDOWN_SECONDS || 3);
+const maintenanceChannelIds = parseChannelIds(process.env.MAINTENANCE_CHANNEL_IDS);
+const maintenanceCheckIntervalSeconds = parseCheckIntervalSeconds(process.env.MAINTENANCE_CHECK_INTERVAL_SECONDS);
 const adminUserIds = new Set(
   (process.env.ADMIN_USERIDS || '')
     .split(',')
@@ -100,6 +103,20 @@ client.on('clientReady', async () => {
     console.log(`Connected to ${client.guilds.cache.size} guild(s): ${client.guilds.cache.map((guild) => guild.name).join(', ') || 'none'}`);
     client.user.setActivity(botStatus, { type: 'WATCHING' });
     await registerSlashCommands();
+
+    if (maintenanceChannelIds.length) {
+      const maintenanceMonitor = createMaintenanceMonitor({
+        client,
+        channelIds: maintenanceChannelIds,
+        intervalSeconds: maintenanceCheckIntervalSeconds,
+      });
+
+      await maintenanceMonitor.checkNow();
+      maintenanceMonitor.start();
+      console.log(`Maintenance monitoring enabled for ${maintenanceChannelIds.length} channel(s) every ${maintenanceCheckIntervalSeconds} second(s).`);
+    } else {
+      console.log('Maintenance monitoring disabled because no MAINTENANCE_CHANNEL_IDS were provided.');
+    }
   } catch (error) {
     console.error('Failed to initialize database:', error.message);
     console.error('Please check your DATABASE_URL environment variable and ensure the database is accessible.');
