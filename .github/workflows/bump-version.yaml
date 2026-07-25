@@ -26,7 +26,8 @@ jobs:
           # Required to fetch full history so the bot can push successfully
           fetch-depth: 0 
           # Ensure you are on the main branch, not a detached head
-          ref: main 
+          ref: main
+          token: ${{ secrets.REPO_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,10 +42,6 @@ jobs:
 
       - name: Bump Version
         run: npm version ${{ github.event.inputs.bump_type }}
-
-      - name: Auth using PAT
-        # Use a PAT instead of the default GITHUB_TOKEN, so the downstream actions will trigger
-        run: git remote set-url origin https://x-access-token:${{ secrets.REPO_PAT }}@github.com/${{ github.repository }}.git
 
       - name: Push Commits and Tags
         run: |
