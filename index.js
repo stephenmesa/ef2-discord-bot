@@ -18,7 +18,7 @@ const adminUserIds = new Set(
     .filter(Boolean)
 );
 
-const versionString = process.env.BOT_VERSION || '1.0.0';
+const versionString = process.env.npm_package_version || '1.0.0';
 
 if (!token) {
   console.error('Missing DISCORD_TOKEN. Set this environment variable before starting.');
