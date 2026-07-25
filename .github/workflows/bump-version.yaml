@@ -42,6 +42,10 @@ jobs:
       - name: Bump Version
         run: npm version ${{ github.event.inputs.bump_type }}
 
+      - name: Auth using PAT
+        # Use a PAT instead of the default GITHUB_TOKEN, so the downstream actions will trigger
+        run: git remote set-url origin https://x-access-token:${{ secrets.REPO_PAT }}@github.com/${{ github.repository }}.git
+
       - name: Push Commits and Tags
         run: |
           git push origin main
