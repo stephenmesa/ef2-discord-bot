@@ -4,7 +4,7 @@ const { SlashCommandBuilder } = require('discord.js');
 
 // Load all command files
 const commandFiles = fs.readdirSync(__dirname).filter(
-  (file) => file.endsWith('.js') && file !== 'index.js'
+  (file) => file.endsWith('.js') && file !== 'index.js' && !file.endsWith('.test.js')
 );
 
 const commands = new Map();

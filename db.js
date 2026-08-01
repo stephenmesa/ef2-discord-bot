@@ -258,6 +258,121 @@ async function getGlobalMpmScatterData() {
   return result.rows;
 }
 
+function getMean(values) {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, val) => sum + val, 0) / values.length;
+}
+
+function getStdDev(values, mean) {
+  if (values.length <= 1) return 0;
+  const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
+  return Math.sqrt(variance);
+}
+
+function getAbsoluteOutlierReasons(entry) {
+  const reasons = [];
+  if (entry.knightLevel <= 0 || entry.knightLevel > 1000) {
+    reasons.push(`Knight Level ${entry.knightLevel} is out of bounds (1-1000)`);
+  }
+  const p = entry.estimatedSrPercent;
+  if (p === null || p === undefined || Number.isNaN(p) || p < 0 || p > 100) {
+    reasons.push(`Impossible SR % (${p !== null && p !== undefined ? p.toFixed(2) : 'NaN'}%)`);
+  }
+  const bp = entry.baseEstimatedSrPercent;
+  if (bp !== null && bp !== undefined && (Number.isNaN(bp) || bp < 0 || bp > 100)) {
+    reasons.push(`Impossible Base SR % (${bp.toFixed(2)}%)`);
+  }
+  return reasons;
+}
+
+function isAbsoluteOutlier(entry) {
+  return getAbsoluteOutlierReasons(entry).length > 0;
+}
+
+async function getOutliers() {
+  const result = await pool.query('SELECT * FROM progress;');
+  const allEntries = result.rows.map(hydrateProgress).filter((r) => !!r);
+
+  const outliers = [];
+
+  for (const entry of allEntries) {
+    const absReasons = getAbsoluteOutlierReasons(entry);
+    if (absReasons.length > 0) {
+      entry.outlierReason = absReasons.join('; ');
+      outliers.push(entry);
+      continue;
+    }
+
+    // Find non-absolute-outlier comparisons within same KL +/- 1
+    const comparisons = allEntries.filter(
+      (o) => o.id !== entry.id &&
+        !isAbsoluteOutlier(o) &&
+        Math.abs(o.knightLevel - entry.knightLevel) <= 1
+    );
+
+    let flagged = false;
+
+    // Check estimatedSrPercent
+    if (comparisons.length >= 3) {
+      const pValues = comparisons
+        .map((o) => o.estimatedSrPercent)
+        .filter((v) => v !== null && v !== undefined && !Number.isNaN(v));
+
+      if (pValues.length >= 3) {
+        const pMean = getMean(pValues);
+        const pStd = getStdDev(pValues, pMean);
+        if (pStd > 0) {
+          const z = Math.abs(entry.estimatedSrPercent - pMean) / pStd;
+          if (z > 3) {
+            entry.outlierReason = `SR % Z-score is ${z.toFixed(2)} (> 3) relative to KL +/- 1 (mean=${pMean.toFixed(2)}%, stddev=${pStd.toFixed(2)}%)`;
+            outliers.push(entry);
+            flagged = true;
+          }
+        } else {
+          // If stddev is 0, check absolute difference is > 1%
+          const diff = Math.abs(entry.estimatedSrPercent - pMean);
+          if (diff > 1.0) {
+            entry.outlierReason = `SR % difference from neighbors is ${diff.toFixed(2)}% (> 1.0%) when neighbor stddev is 0 (mean=${pMean.toFixed(2)}%)`;
+            outliers.push(entry);
+            flagged = true;
+          }
+        }
+      }
+    }
+
+    // Check baseEstimatedSrPercent if not already flagged and if base values are present
+    if (!flagged && entry.baseEstimatedSrPercent !== null && entry.baseEstimatedSrPercent !== undefined && !Number.isNaN(entry.baseEstimatedSrPercent)) {
+      if (comparisons.length >= 3) {
+        const bpValues = comparisons
+          .map((o) => o.baseEstimatedSrPercent)
+          .filter((v) => v !== null && v !== undefined && !Number.isNaN(v));
+
+        if (bpValues.length >= 3) {
+          const bpMean = getMean(bpValues);
+          const bpStd = getStdDev(bpValues, bpMean);
+          if (bpStd > 0) {
+            const z = Math.abs(entry.baseEstimatedSrPercent - bpMean) / bpStd;
+            if (z > 3) {
+              entry.outlierReason = `Base SR % Z-score is ${z.toFixed(2)} (> 3) relative to KL +/- 1 (mean=${bpMean.toFixed(2)}%, stddev=${bpStd.toFixed(2)}%)`;
+              outliers.push(entry);
+            }
+          } else {
+            const diff = Math.abs(entry.baseEstimatedSrPercent - bpMean);
+            if (diff > 1.0) {
+              entry.outlierReason = `Base SR % difference from neighbors is ${diff.toFixed(2)}% (> 1.0%) when neighbor stddev is 0 (mean=${bpMean.toFixed(2)}%)`;
+              outliers.push(entry);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Sort by createdAt descending
+  outliers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return outliers;
+}
+
 module.exports = {
   initDatabase,
   insertProgress,
@@ -268,6 +383,7 @@ module.exports = {
   deleteLatestEntry,
   deleteEntryById,
   getStats,
+  getOutliers,
   hydrateProgress,
   getGlobalMpmScatterData,
 };
