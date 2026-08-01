@@ -251,6 +251,13 @@ async function getStats() {
   return stats;
 }
 
+async function getGlobalMpmScatterData() {
+  const result = await pool.query(
+    `SELECT knight_level, sr_mpm, base_sr_mpm FROM progress WHERE entry_type = 'sr' ORDER BY knight_level ASC;`
+  );
+  return result.rows;
+}
+
 module.exports = {
   initDatabase,
   insertProgress,
@@ -262,4 +269,5 @@ module.exports = {
   deleteEntryById,
   getStats,
   hydrateProgress,
+  getGlobalMpmScatterData,
 };

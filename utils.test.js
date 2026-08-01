@@ -1,4 +1,17 @@
-const { parseCompactNumber, compactifyNumber, calculateBaseMpm } = require('./utils');
+jest.mock('quickchart-js', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      setConfig: jest.fn(),
+      setWidth: jest.fn(),
+      setHeight: jest.fn(),
+      setBackgroundColor: jest.fn(),
+      toBinary: jest.fn().mockResolvedValue(Buffer.from('mocked chart buffer')),
+    };
+  });
+});
+
+const { parseCompactNumber, compactifyNumber, calculateBaseMpm, buildScatterChartBuffer } = require('./utils');
+const QuickChart = require('quickchart-js');
 
 describe('calculateBaseMpm', () => {
   describe('Happy path scenarios', () => {
@@ -201,5 +214,88 @@ describe('compactifyNumber', () => {
   test('keeps small numbers as plain values', () => {
     expect(compactifyNumber('999')).toBe('999');
     expect(compactifyNumber('123')).toBe('123');
+  });
+});
+
+describe('buildScatterChartBuffer', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('correctly configures scatter plot and returns buffer for standard metric', async () => {
+    const entries = [
+      { knight_level: 50, sr_mpm: '10a', base_sr_mpm: '9a' },
+      { knightLevel: 60, srMpm: '20a', baseSrMpm: '18a' }, // camelCase
+      { knight_level: 0, sr_mpm: '10a' }, // invalid KL
+      { knight_level: 70, sr_mpm: 'invalid' }, // invalid MPM
+      { knight_level: 1001, sr_mpm: '10a' } // too high KL (filtered out)
+    ];
+
+    const result = await buildScatterChartBuffer(entries, 'standard');
+
+    expect(result.toString()).toBe('mocked chart buffer');
+
+    const mockChartInstance = QuickChart.mock.results[0].value;
+    expect(mockChartInstance.setConfig).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'scatter',
+      data: expect.objectContaining({
+        datasets: [
+          expect.objectContaining({
+            label: 'Standard MPM',
+            data: [
+              { x: 50, y: 10000 },
+              { x: 60, y: 20000 }
+            ]
+          })
+        ]
+      }),
+      options: expect.objectContaining({
+        scales: expect.objectContaining({
+          yAxes: [
+            expect.objectContaining({
+              type: 'logarithmic',
+              min: 10000 // min of standard y values (10000, 20000)
+            })
+          ]
+        })
+      })
+    }));
+  });
+
+  test('correctly configures base metric', async () => {
+    const entries = [
+      { knight_level: 50, sr_mpm: '10a', base_sr_mpm: '9a' },
+      { knight_level: 60, sr_mpm: '20a', base_sr_mpm: '18a' }
+    ];
+
+    const result = await buildScatterChartBuffer(entries, 'base');
+
+    expect(result.toString()).toBe('mocked chart buffer');
+
+    const mockChartInstance = QuickChart.mock.results[0].value;
+    expect(mockChartInstance.setConfig).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'scatter',
+      data: expect.objectContaining({
+        datasets: [
+          expect.objectContaining({
+            label: 'Base MPM',
+            data: [
+              { x: 50, y: 9000 },
+              { x: 60, y: 18000 }
+            ]
+          })
+        ]
+      }),
+      options: expect.objectContaining({
+        scales: expect.objectContaining({
+          yAxes: [
+            expect.objectContaining({
+              type: 'logarithmic',
+              min: 9000
+            })
+          ]
+        })
+      })
+    }));
   });
 });
