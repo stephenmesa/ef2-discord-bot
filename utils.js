@@ -529,6 +529,83 @@ function assessProgress(currentProgress, comparableProgresses) {
   };
 }
 
+async function buildScatterChartBuffer(entries, metric = 'standard') {
+  const width = 1000;
+  const height = 540;
+
+  const dataPoints = entries
+    .map((entry) => {
+      const kl = Number(entry.knight_level || entry.knightLevel);
+      const mpmStr = metric === 'base' ? (entry.base_sr_mpm || entry.baseSrMpm) : (entry.sr_mpm || entry.srMpm);
+      const mpm = parseCompactNumber(mpmStr);
+      return { x: kl, y: mpm };
+    })
+    .filter((pt) => !Number.isNaN(pt.x) && pt.x > 0 && pt.x <= 1000 && !Number.isNaN(pt.y) && pt.y > 0);
+
+  const datasetLabel = metric === 'base' ? 'Base MPM' : 'Standard MPM';
+  const yValues = dataPoints.map((pt) => pt.y);
+  const yMin = yValues.length > 0 ? Math.max(1, Math.min(...yValues)) : 1;
+
+  const configuration = {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: datasetLabel,
+          data: dataPoints,
+          backgroundColor: '#f2994a',
+          borderColor: '#f2994a',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      title: {
+        display: true,
+        text: `Every ${metric === 'base' ? 'Base ' : ''}MPM across Knight Levels`,
+      },
+      scales: {
+        xAxes: [
+          {
+            type: 'linear',
+            position: 'bottom',
+            scaleLabel: {
+              display: true,
+              labelString: 'Knight Level',
+            },
+            ticks: {
+              precision: 0,
+            },
+          },
+        ],
+        yAxes: [
+          {
+            type: 'logarithmic',
+            position: 'left',
+            scaleLabel: {
+              display: true,
+              labelString: metric === 'base' ? 'Base MPM' : 'Standard MPM',
+            },
+            min: yMin,
+            ticks: {
+              callback: compactifyNumber,
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  const chart = new QuickChart();
+  chart.setConfig(configuration);
+  chart.setWidth(width);
+  chart.setHeight(height);
+  chart.setBackgroundColor('white');
+  return chart.toBinary();
+}
+
 module.exports = {
   parseCompactNumber,
   compactifyNumber,
@@ -538,6 +615,7 @@ module.exports = {
   formatEntry,
   parseEntryType,
   buildChartBuffer,
+  buildScatterChartBuffer,
   buildProgressCsv,
   buildFooter,
   getEmbedColor,
