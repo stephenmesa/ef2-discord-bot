@@ -9,6 +9,8 @@ env:
   REGION: 'us-west1'
   WORKLOAD_IDENTITY_PROVIDER: 'projects/515460920183/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
   SERVICE_ACCOUNT: 'github-publisher@ef2-discord-bot.iam.gserviceaccount.com'
+  ZONE: 'us-west1-b'
+  INSTANCE_NAME: 'ef2-discord-bot-2'
 
 jobs:
   deploy:
@@ -52,3 +54,11 @@ jobs:
             -t us-west1-docker.pkg.dev/ef2-discord-bot/ef2-discord-bot/ef2-discord-bot:${{ github.ref_name }} \
             -t us-west1-docker.pkg.dev/ef2-discord-bot/ef2-discord-bot/ef2-discord-bot:latest \
             --push .
+
+      - id: 'compute-ssh'
+        uses: 'google-github-actions/ssh-compute@v2'
+        with:
+          instance_name: ${{ env.INSTANCE_NAME }}
+          zone: ${{ env.ZONE }}
+          ssh_private_key: '${{ secrets.GCP_SSH_PRIVATE_KEY }}'
+          command: 'docker-credential-gcr configure-docker --registries us-west1-docker.pkg.dev && docker pull us-west1-docker.pkg.dev/ef2-discord-bot/ef2-discord-bot/ef2-discord-bot:latest && sudo systemctl restart ef2-discord-bot'
