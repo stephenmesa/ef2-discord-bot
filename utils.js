@@ -308,7 +308,11 @@ async function buildChartBuffer(entries, mode = 'combined') {
 }
 
 function buildProgressCsv(rows) {
+  const includeReason = rows.some((row) => row.outlierReason !== undefined);
   const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At', 'Rebirth Medal Bonus', 'Base SR MPM', 'Estimated Base SR %', 'Doubled Base SR %'];
+  if (includeReason) {
+    header.push('Reason');
+  }
   const lines = [header.join(',')];
   for (const row of rows) {
     const values = [
@@ -325,6 +329,9 @@ function buildProgressCsv(rows) {
       row.baseEstimatedSrPercent ? Number(row.baseEstimatedSrPercent).toFixed(2) : null,
       row.baseEstimatedSrPercentDouble ? Number(row.baseEstimatedSrPercentDouble).toFixed(2) : null,
     ];
+    if (includeReason) {
+      values.push(row.outlierReason || '');
+    }
     lines.push(values.map((value) => JSON.stringify(value)).join(','));
   }
   return Buffer.from(lines.join('\n'), 'utf8');
