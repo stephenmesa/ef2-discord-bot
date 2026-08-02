@@ -346,7 +346,8 @@ function getEmbedColor() {
     return 0x5865F2; // Discord Blurple, or use a custom hex like '#7289da'
 }
 
-function buildGradeEmbed(record, assessment) {
+function buildGradeEmbed(record, assessment, options = {}) {
+  const { title = '✨ Latest Soul Rest Entry', previous = null } = options;
   const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
   const totalMinutes = 4 * 60;
   const medalsGained = parseCompactNumber(record.srMpm) * totalMinutes * srEfficiency;
@@ -357,13 +358,12 @@ function buildGradeEmbed(record, assessment) {
     inline: true,
   }));
 
-  let description = assessment.score
+  let description = (assessment.score !== null && assessment.score !== undefined)
     ? `Your SR grade is **${assessment.score}/100**`
-    : 'Sorry, but your grade could not be calculated based on lack of data';
+    : 'No nearby KL entries found for grade comparison.';
 
-  if (assessment.baseScore) {
-    description += `
-    Your Base SR grade is **${assessment.baseScore}/100**`;
+  if (assessment.baseScore !== null && assessment.baseScore !== undefined) {
+    description += `\nYour Base SR grade is **${assessment.baseScore}/100**`;
   }
 
   const baseFields = [];
@@ -385,9 +385,42 @@ function buildGradeEmbed(record, assessment) {
     });
   }
 
-  return new EmbedBuilder()
+  const previousFields = [];
+  if (previous) {
+    const currentKl = Number(record.knightLevel);
+    const prevKl = Number(previous.knightLevel);
+    const klGain = currentKl - prevKl;
+    const currentMedals = parseCompactNumber(record.totalMedals);
+    const previousMedals = parseCompactNumber(previous.totalMedals);
+    const medalChange = currentMedals - previousMedals;
+    const medalGainPercent = previousMedals > 0
+      ? (medalChange / previousMedals) * 100
+      : 0;
+
+    const klSign = klGain >= 0 ? '+' : '';
+    const medalSign = medalChange >= 0 ? '+' : '';
+    const pctSign = medalGainPercent >= 0 ? '+' : '';
+
+    previousFields.push({
+      name: '📜 Previous Entry',
+      value: `KL ${previous.knightLevel} (${formatNumber(previous.totalMedals)})`,
+      inline: true,
+    });
+    previousFields.push({
+      name: '⚔️ KL Change',
+      value: `**${klSign}${klGain}**`,
+      inline: true,
+    });
+    previousFields.push({
+      name: '🏅 Medal Change',
+      value: `**${medalSign}${compactifyNumber(medalChange)}** (${pctSign}${medalGainPercent.toFixed(2)}%)`,
+      inline: true,
+    });
+  }
+
+  const embed = new EmbedBuilder()
     .setColor(getEmbedColor())
-    .setTitle('✨ Latest Soul Rest Entry')
+    .setTitle(title)
     .setDescription(description)
     .addFields(
         { name: '🆔 Entry ID', value: `${record.id}`, inline: true },
@@ -398,13 +431,21 @@ function buildGradeEmbed(record, assessment) {
         { name: '📊 SR MPM', value: `**${formatNumber(record.srMpm)}**`, inline: true },
         { name: '📈 SR %', value: `**${Number(record.estimatedSrPercent).toFixed(2)}%** (${compactifyNumber(medalsGained)} medals gained)`, inline: true },
         { name: '⚡ Double SR %', value: `**${Number(record.estimatedSrPercentDouble).toFixed(2)}%** (${compactifyNumber(medalsGained * 2)} medals gained)`, inline: true },
-    )
-    .addFields(
-      ...baseFields,
-    )
-    .addFields(
-        ...klFields,
-    )
+    );
+
+  if (baseFields.length > 0) {
+    embed.addFields(...baseFields);
+  }
+
+  if (previousFields.length > 0) {
+    embed.addFields(...previousFields);
+  }
+
+  if (klFields.length > 0) {
+    embed.addFields(...klFields);
+  }
+
+  return embed
     .setTimestamp(record.createdAt)
     .setFooter(buildFooter(!!record.baseSrMpm));
 }
