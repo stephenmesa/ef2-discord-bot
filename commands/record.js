@@ -1,11 +1,10 @@
 const { MessageFlags } = require('discord.js');
 const {
-  formatNumber,
   compactifyNumber,
   parseCompactNumber,
-  getPercentile,
-  validatePercentage,
   calculateBaseMpm,
+  assessProgress,
+  buildGradeEmbed,
 } = require('../utils');
 
 module.exports = {
@@ -102,41 +101,25 @@ module.exports = {
       baseEstimatedDoubleSrPct,
     });
 
-    const lines = [
-      `Recorded SR progress for KL ${knightLevel}.`,
-      `Estimated SR: ${estimatedSrPct.toFixed(2)}% (${compactifyNumber(medalsGained)} medals gained)`,
-      `Doubled SR: ${estimatedDoubleSrPct.toFixed(2)}% (${compactifyNumber(medalsGained * 2)} medals gained)`,
-      `MPM: ${srMpm}`,
-    ];
-
-    if (!!rebirthMedalBonus) {
-      lines.push(`Medal Buff %: ${rebirthMedalBonus}%`);
-      lines.push(`Base MPM: ${baseSRMpm} (This is your MPM without the medal buff %, for ease of comparing across players)`);
-    }
-
-    if (previous) {
-      const klGain = knightLevel - Number(previous.knightLevel);
-      const previousMedals = parseCompactNumber(previous.totalMedals);
-      const medalChange = totalMedalsValue - previousMedals;
-      const medalGainPercent = previousMedals > 0
-        ? ((totalMedalsValue - previousMedals) / previousMedals) * 100
-        : 0;
-      lines.push(`Previous entry was KL ${previous.knightLevel} with ${formatNumber(previous.totalMedals)} medals.`);
-      lines.push(`KL gain: ${klGain >= 0 ? '+' : ''}${klGain}`);
-      lines.push(`Medal change: ${medalChange >= 0 ? '+' : ''}${compactifyNumber(medalChange)} (${medalGainPercent.toFixed(2)}%).`);
-    }
-
     const nearbyEntries = await db.getNearbyEntries('sr', knightLevel, 1, entry.id);
-    if (nearbyEntries.length > 0) {
-      const allPercentages = nearbyEntries.map((row) => Number(row.estimatedSrPercent)).filter(validatePercentage);
-      const scoreDecimal = getPercentile(allPercentages, estimatedSrPct);
-      const score = Math.round(scoreDecimal);
+    const progresses = nearbyEntries.map((row) => ({
+      kl: Number(row.knightLevel),
+      percentage: row.estimatedSrPercent,
+      basePercentage: row.baseEstimatedSrPercent ? Number(row.baseEstimatedSrPercent) : null,
+    }));
+    const assessment = assessProgress({
+      percentage: entry.estimatedSrPercent,
+      basePercentage: entry.baseEstimatedSrPercent ? Number(entry.baseEstimatedSrPercent) : null,
+    }, progresses);
 
-      lines.push(`Your current SR grade is ${score}/100 compared to ${nearbyEntries.length} nearby KL entries.`);
-    } else {
-      lines.push('No nearby KL entries found for grade comparison. Record more SR progress to build your grade profile.');
-    }
+    const embed = buildGradeEmbed(entry, assessment, {
+      title: '✨ Recorded Soul Rest Entry',
+      previous,
+    });
 
-    return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
+    return interaction.reply({
+      embeds: [embed],
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };
