@@ -125,7 +125,13 @@ async function getEntryByIdWithNeighbors(userId, type = 'sr', id) {
      WHERE p.user_id = $1 AND p.entry_type = $2 AND p.id = $3;`,
     [userId, normalizeEntryType(type), recordId]
   );
-  return hydrateProgress(result.rows[0]) || null;
+  const progress = hydrateProgress(result.rows[0]);
+
+  if (!progress) return null;
+
+  progress.prev_id = result.rows[0].prev_id;
+  progress.next_id = result.rows[0].next_id;
+  return progress;
 }
 
 function hydrateProgress(progress) {
