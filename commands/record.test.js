@@ -16,41 +16,187 @@ describe('record command', () => {
         getLatestEntry: jest.fn(),
         insertProgress: jest.fn(),
         getNearbyEntries: jest.fn(),
+        getHighestMetrics: jest.fn().mockResolvedValue({
+          highestKnightLevel: null,
+          highestTotalMedals: null,
+          highestSrMpm: null,
+        }),
       },
     };
   });
 
-  test('validates inputs and returns error message when invalid', async () => {
-    // Invalid Knight Level
+  test('validates knight level', async () => {
+    // Non-integer / <= 0
     await recordCommand.execute(mockInteraction, ['invalid', '10a', '1a'], mockContext);
     expect(mockInteraction.reply).toHaveBeenCalledWith({
       content: 'Knight level must be a whole number greater than zero.',
       flags: MessageFlags.Ephemeral,
     });
 
-    // Invalid Total Medals
+    // >= 1000
     mockInteraction.reply.mockClear();
-    await recordCommand.execute(mockInteraction, [47, 'invalid', '1a'], mockContext);
+    await recordCommand.execute(mockInteraction, [1000, '10a', '1a'], mockContext);
     expect(mockInteraction.reply).toHaveBeenCalledWith({
-      content: 'Total medals must be a positive number.',
+      content: 'Knight level must be below 1000.',
       flags: MessageFlags.Ephemeral,
     });
 
-    // Invalid SR MPM
+    // >= 2 * highest current knight level
     mockInteraction.reply.mockClear();
-    await recordCommand.execute(mockInteraction, [47, '10a', 'invalid'], mockContext);
+    mockContext.db.getHighestMetrics.mockResolvedValueOnce({
+      highestKnightLevel: 75,
+      highestTotalMedals: null,
+      highestSrMpm: null,
+    });
+    await recordCommand.execute(mockInteraction, [150, '10a', '1a'], mockContext);
     expect(mockInteraction.reply).toHaveBeenCalledWith({
-      content: 'SR mpm must be a positive number.',
+      content: 'Knight level must be less than twice the highest recorded knight level (150).',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  test('validates total medals', async () => {
+    // <= 1000 (1.00a)
+    await recordCommand.execute(mockInteraction, [47, '1000', '1a'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Total medals must be greater than 1000 (1.00a).',
       flags: MessageFlags.Ephemeral,
     });
 
-    // Invalid Medal Buff Percent
+    // >= 1.00f
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '1.00f', '1a'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Total medals must be below 1.00f.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // >= 2 * highest current total medals
+    mockInteraction.reply.mockClear();
+    mockContext.db.getHighestMetrics.mockResolvedValueOnce({
+      highestKnightLevel: null,
+      highestTotalMedals: 10000, // 10.00a
+      highestSrMpm: null,
+    });
+    await recordCommand.execute(mockInteraction, [47, '20.00a', '1a'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Total medals must be less than twice the highest recorded total medals (20.0a).',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  test('validates SR mpm', async () => {
+    // <= 600
+    await recordCommand.execute(mockInteraction, [47, '10a', '600'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR mpm must be greater than 600.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // >= 1.00d
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '1000a', '1.00d'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR mpm must be below 1.00d.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // >= 2 * highest current SR mpm
+    mockInteraction.reply.mockClear();
+    mockContext.db.getHighestMetrics.mockResolvedValueOnce({
+      highestKnightLevel: null,
+      highestTotalMedals: null,
+      highestSrMpm: 10000, // 10.00a
+    });
+    await recordCommand.execute(mockInteraction, [47, '100a', '20.00a'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR mpm must be less than twice the highest recorded SR mpm (20.0a).',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  test('validates SR percentage and medal buff percent', async () => {
+    // SR % >= 100% (e.g. MPM is too huge relative to total medals)
+    await recordCommand.execute(mockInteraction, [47, '2.00a', '10.00a'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR percentage must be above 0% and below 100%.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // Invalid Medal Buff Percent (negative)
     mockInteraction.reply.mockClear();
     await recordCommand.execute(mockInteraction, [47, '10a', '1a', '-50'], mockContext);
     expect(mockInteraction.reply).toHaveBeenCalledWith({
-      content: 'Medal buff percent must be a positive number.',
+      content: 'Medal buff percent must be above 0 and below 20000.',
       flags: MessageFlags.Ephemeral,
     });
+
+    // Invalid Medal Buff Percent (zero)
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', '0'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Medal buff percent must be above 0 and below 20000.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // Invalid Medal Buff Percent (>= 20000)
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', '20000'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Medal buff percent must be above 0 and below 20000.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // Invalid Medal Buff Percent (non-numeric)
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', 'invalid'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Medal buff percent must be above 0 and below 20000.',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  test('respects process.env limit overrides for knight level, total medals, SR mpm, and medal buff percent', async () => {
+    const originalEnv = { ...process.env };
+    process.env.MAX_KNIGHT_LEVEL = '500';
+    process.env.MAX_TOTAL_MEDALS = '10.00c';
+    process.env.MAX_SR_MPM = '5.00b';
+    process.env.MAX_MEDAL_BUFF_PERCENT = '15000';
+
+    try {
+      // Knight level >= 500
+      await recordCommand.execute(mockInteraction, [500, '100a', '10a'], mockContext);
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'Knight level must be below 500.',
+        flags: MessageFlags.Ephemeral,
+      });
+
+      // Total medals >= 10.00c
+      mockInteraction.reply.mockClear();
+      await recordCommand.execute(mockInteraction, [47, '10.00c', '10a'], mockContext);
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'Total medals must be below 10.0c.',
+        flags: MessageFlags.Ephemeral,
+      });
+
+      // SR mpm >= 5.00b
+      mockInteraction.reply.mockClear();
+      await recordCommand.execute(mockInteraction, [47, '10.00a', '5.00b'], mockContext);
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'SR mpm must be below 5.00b.',
+        flags: MessageFlags.Ephemeral,
+      });
+
+      // Medal buff percent >= 15000
+      mockInteraction.reply.mockClear();
+      await recordCommand.execute(mockInteraction, [47, '10.00a', '1.00a', '15000'], mockContext);
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'Medal buff percent must be above 0 and below 15000.',
+        flags: MessageFlags.Ephemeral,
+      });
+    } finally {
+      process.env = originalEnv;
+    }
   });
 
   test('records entry without previous entry and returns embed reply', async () => {
