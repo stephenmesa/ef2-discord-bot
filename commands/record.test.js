@@ -123,20 +123,45 @@ describe('record command', () => {
       flags: MessageFlags.Ephemeral,
     });
 
-    // Invalid Medal Buff Percent
+    // Invalid Medal Buff Percent (negative)
     mockInteraction.reply.mockClear();
     await recordCommand.execute(mockInteraction, [47, '10a', '1a', '-50'], mockContext);
     expect(mockInteraction.reply).toHaveBeenCalledWith({
-      content: 'Medal buff percent must be a positive number.',
+      content: 'Medal buff percent must be above 0 and below 20000.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // Invalid Medal Buff Percent (zero)
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', '0'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Medal buff percent must be above 0 and below 20000.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // Invalid Medal Buff Percent (>= 20000)
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', '20000'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Medal buff percent must be above 0 and below 20000.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // Invalid Medal Buff Percent (non-numeric)
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', 'invalid'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'Medal buff percent must be above 0 and below 20000.',
       flags: MessageFlags.Ephemeral,
     });
   });
 
-  test('respects process.env limit overrides for knight level, total medals, and SR mpm', async () => {
+  test('respects process.env limit overrides for knight level, total medals, SR mpm, and medal buff percent', async () => {
     const originalEnv = { ...process.env };
     process.env.MAX_KNIGHT_LEVEL = '500';
     process.env.MAX_TOTAL_MEDALS = '10.00c';
     process.env.MAX_SR_MPM = '5.00b';
+    process.env.MAX_MEDAL_BUFF_PERCENT = '15000';
 
     try {
       // Knight level >= 500
@@ -156,9 +181,17 @@ describe('record command', () => {
 
       // SR mpm >= 5.00b
       mockInteraction.reply.mockClear();
-      await recordCommand.execute(mockInteraction, [47, '1.00c', '5.00b'], mockContext);
+      await recordCommand.execute(mockInteraction, [47, '10.00a', '5.00b'], mockContext);
       expect(mockInteraction.reply).toHaveBeenCalledWith({
         content: 'SR mpm must be below 5.00b.',
+        flags: MessageFlags.Ephemeral,
+      });
+
+      // Medal buff percent >= 15000
+      mockInteraction.reply.mockClear();
+      await recordCommand.execute(mockInteraction, [47, '10.00a', '1.00a', '15000'], mockContext);
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: 'Medal buff percent must be above 0 and below 15000.',
         flags: MessageFlags.Ephemeral,
       });
     } finally {

@@ -55,6 +55,7 @@ module.exports = {
     const maxKnightLevel = process.env.MAX_KNIGHT_LEVEL ? Number(process.env.MAX_KNIGHT_LEVEL) : 1000;
     const maxTotalMedalsLimit = parseCompactNumber(process.env.MAX_TOTAL_MEDALS || '1.00f');
     const maxSrMpmLimit = parseCompactNumber(process.env.MAX_SR_MPM || '1.00d');
+    const maxMedalBuffPercent = process.env.MAX_MEDAL_BUFF_PERCENT ? Number(process.env.MAX_MEDAL_BUFF_PERCENT) : 20000;
 
     const highestMetrics = await db.getHighestMetrics?.('sr');
     const { highestKnightLevel, highestTotalMedals, highestSrMpm } = highestMetrics || {};
@@ -89,8 +90,8 @@ module.exports = {
       return interaction.reply({ content: `SR mpm must be less than twice the highest recorded SR mpm (${compactifyNumber(2 * highestSrMpm)}).`, flags: MessageFlags.Ephemeral });
     }
 
-    if (!!rebirthMedalBonus && (!Number.isFinite(rebirthMedalBonusValue) || rebirthMedalBonusValue <= 0)) {
-      return interaction.reply({ content: 'Medal buff percent must be a positive number.', flags: MessageFlags.Ephemeral });
+    if (!!rebirthMedalBonus && (!Number.isFinite(rebirthMedalBonusValue) || rebirthMedalBonusValue <= 0 || rebirthMedalBonusValue >= maxMedalBuffPercent)) {
+      return interaction.reply({ content: `Medal buff percent must be above 0 and below ${maxMedalBuffPercent}.`, flags: MessageFlags.Ephemeral });
     }
 
     const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
