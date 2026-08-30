@@ -9,7 +9,7 @@ jest.mock('pg', () => {
 });
 
 const pg = require('pg');
-const { hydrateProgress, getGlobalMpmScatterData, getOutliers } = require('./db');
+const { hydrateProgress, getGlobalMpmScatterData, getOutliers, getHighestMetrics } = require('./db');
 
 describe('hydrateProgress()', () => {
   describe('Sad Paths', () => {
@@ -211,5 +211,34 @@ describe('getOutliers()', () => {
       userId: 'user_h',
       outlierReason: expect.stringContaining('SR % difference from neighbors is'),
     });
+  });
+});
+
+describe('getHighestMetrics()', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  test('returns nulls when database has no valid entries', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    const res = await getHighestMetrics();
+    expect(res).toEqual({
+      highestKnightLevel: null,
+      highestTotalMedals: null,
+      highestSrMpm: null,
+    });
+  });
+
+  test('calculates highest valid knight level, total medals, and SR mpm', async () => {
+    const mockRows = [
+      { max_knight_level: 75, max_total_medals: 50000000, max_sr_mpm: 5000 },
+    ];
+    mockQuery.mockResolvedValueOnce({ rows: mockRows });
+
+    const res = await getHighestMetrics();
+
+    expect(res.highestKnightLevel).toBe(75);
+    expect(res.highestTotalMedals).toBe(50000000);
+    expect(res.highestSrMpm).toBe(5000);
   });
 });

@@ -39,7 +39,10 @@ async function initDatabase() {
       rebirth_medal_bonus NUMERIC,
       base_sr_mpm TEXT,
       base_estimated_sr_pct NUMERIC,
-      base_estimated_double_sr_pct NUMERIC
+      base_estimated_double_sr_pct NUMERIC,
+      total_medals_value NUMERIC,
+      sr_mpm_value NUMERIC,
+      base_sr_mpm_value NUMERIC
     );
   `);
   await pool.query(`
@@ -56,8 +59,25 @@ async function initDatabase() {
     ADD COLUMN IF NOT EXISTS rebirth_medal_bonus NUMERIC,
     ADD COLUMN IF NOT EXISTS base_sr_mpm TEXT,
     ADD COLUMN IF NOT EXISTS base_estimated_sr_pct NUMERIC,
-    ADD COLUMN IF NOT EXISTS base_estimated_double_sr_pct NUMERIC;
+    ADD COLUMN IF NOT EXISTS base_estimated_double_sr_pct NUMERIC,
+    ADD COLUMN IF NOT EXISTS total_medals_value NUMERIC,
+    ADD COLUMN IF NOT EXISTS sr_mpm_value NUMERIC,
+    ADD COLUMN IF NOT EXISTS base_sr_mpm_value NUMERIC;
   `);
+
+  const unpopulated = await pool.query(`
+    SELECT id, total_medals, sr_mpm, base_sr_mpm FROM progress
+    WHERE total_medals_value IS NULL OR sr_mpm_value IS NULL;
+  `);
+  for (const row of unpopulated.rows) {
+    const tmVal = parseCompactNumber(row.total_medals);
+    const mpmVal = parseCompactNumber(row.sr_mpm);
+    const baseMpmVal = row.base_sr_mpm ? parseCompactNumber(row.base_sr_mpm) : null;
+    await pool.query(
+      `UPDATE progress SET total_medals_value = $1, sr_mpm_value = $2, base_sr_mpm_value = $3 WHERE id = $4;`,
+      [tmVal, mpmVal, baseMpmVal, row.id]
+    );
+  }
 }
 
 function normalizeEntryType(type) {
@@ -76,6 +96,8 @@ async function insertProgress(entry) {
     knightLevel,
     totalMedals,
     srMpm,
+    totalMedalsValue: providedTotalMedalsValue,
+    srMpmValue: providedSrMpmValue,
     estimatedSrPct,
     estimatedDoubleSrPct,
     notes,
@@ -85,11 +107,15 @@ async function insertProgress(entry) {
     baseEstimatedDoubleSrPct,
   } = entry;
 
+  const tmVal = providedTotalMedalsValue ?? parseCompactNumber(totalMedals);
+  const mpmVal = providedSrMpmValue ?? parseCompactNumber(srMpm);
+  const baseMpmVal = baseSRMpm ? parseCompactNumber(baseSRMpm) : null;
+
   const result = await pool.query(
-    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, base_sr_mpm, base_estimated_sr_pct, base_estimated_double_sr_pct)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, base_sr_mpm, base_estimated_sr_pct, base_estimated_double_sr_pct, total_medals_value, sr_mpm_value, base_sr_mpm_value)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING *;`,
-    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, baseSRMpm || null, baseEstimatedSrPct || null, baseEstimatedDoubleSrPct || null]
+    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, baseSRMpm || null, baseEstimatedSrPct || null, baseEstimatedDoubleSrPct || null, tmVal, mpmVal, baseMpmVal]
   );
 
   return hydrateProgress(result.rows[0]);
@@ -149,10 +175,12 @@ function hydrateProgress(progress) {
     notes,
     created_at: createdAt,
     rebirth_medal_bonus: rebirthMedalBonus,
+    total_medals_value: dbTotalMedalsValue,
+    sr_mpm_value: dbSrMpmValue,
   } = progress;
 
-  const srMpmValue = parseCompactNumber(srMpm);
-  const totalMedalsValue = parseCompactNumber(totalMedals);
+  const srMpmValue = dbSrMpmValue != null ? Number(dbSrMpmValue) : parseCompactNumber(srMpm);
+  const totalMedalsValue = dbTotalMedalsValue != null ? Number(dbTotalMedalsValue) : parseCompactNumber(totalMedals);
   const estimatedSrPercent = calculateSrPercentage(srMpmValue, totalMedalsValue);
   const baseSrMpmValue = calculateBaseMpm(srMpmValue, rebirthMedalBonus);
   const baseEstimatedSrPercent = calculateSrPercentage(baseSrMpmValue, totalMedalsValue);
@@ -164,6 +192,8 @@ function hydrateProgress(progress) {
     knightLevel,
     totalMedals,
     srMpm,
+    totalMedalsValue,
+    srMpmValue,
     estimatedSrPercent: Number(estimatedSrPercent.toFixed(2)),
     estimatedSrPercentDouble: Number((estimatedSrPercent * 2).toFixed(2)),
     notes,
@@ -379,6 +409,33 @@ async function getOutliers() {
   return outliers;
 }
 
+async function getHighestMetrics(type = 'sr') {
+  const maxKnightLevel = process.env.MAX_KNIGHT_LEVEL ? Number(process.env.MAX_KNIGHT_LEVEL) : 1000;
+  const maxTotalMedalsLimit = parseCompactNumber(process.env.MAX_TOTAL_MEDALS || '1.00f');
+  const maxSrMpmLimit = parseCompactNumber(process.env.MAX_SR_MPM || '1.00d');
+
+  const result = await pool.query(
+    `SELECT 
+       MAX(knight_level) AS max_knight_level,
+       MAX(total_medals_value) AS max_total_medals,
+       MAX(sr_mpm_value) AS max_sr_mpm
+     FROM progress 
+     WHERE entry_type = $1
+       AND knight_level > 0 AND knight_level < $2
+       AND total_medals_value > 1000 AND total_medals_value < $3
+       AND sr_mpm_value > 600 AND sr_mpm_value < $4
+       AND estimated_sr_pct > 0 AND estimated_sr_pct < 100;`,
+    [normalizeEntryType(type), maxKnightLevel, maxTotalMedalsLimit, maxSrMpmLimit]
+  );
+
+  const row = result.rows[0];
+  return {
+    highestKnightLevel: row?.max_knight_level != null ? Number(row.max_knight_level) : null,
+    highestTotalMedals: row?.max_total_medals != null ? Number(row.max_total_medals) : null,
+    highestSrMpm: row?.max_sr_mpm != null ? Number(row.max_sr_mpm) : null,
+  };
+}
+
 module.exports = {
   initDatabase,
   insertProgress,
@@ -390,6 +447,7 @@ module.exports = {
   deleteEntryById,
   getStats,
   getOutliers,
+  getHighestMetrics,
   hydrateProgress,
   getGlobalMpmScatterData,
 };

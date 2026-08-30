@@ -40,26 +40,55 @@ module.exports = {
   async execute(interaction, args, context) {
     const { db } = context;
 
-    const knightLevel = args[0];
-    const totalMedalsArg = args[1];
-    const srMpmArg = args[2];
-    const rebirthMedalBonus = args[3];
+    const knightLevelArg = interaction.options?.getInteger ? interaction.options.getInteger('knight_level') : args?.[0];
+    const totalMedalsArg = interaction.options?.getString ? interaction.options.getString('total_medals') : args?.[1];
+    const srMpmArg = interaction.options?.getString ? interaction.options.getString('sr_mpm') : args?.[2];
+    const rebirthMedalBonus = interaction.options?.getString ? interaction.options.getString('medal_buff_percent') : args?.[3];
 
+    const knightLevel = Number(knightLevelArg);
     const totalMedalsValue = parseCompactNumber(totalMedalsArg);
     const srMpmValue = parseCompactNumber(srMpmArg);
     const rebirthMedalBonusValue = Number(rebirthMedalBonus);
     const totalMedals = compactifyNumber(totalMedalsArg);
     const srMpm = compactifyNumber(srMpmArg);
 
+    const maxKnightLevel = process.env.MAX_KNIGHT_LEVEL ? Number(process.env.MAX_KNIGHT_LEVEL) : 1000;
+    const maxTotalMedalsLimit = parseCompactNumber(process.env.MAX_TOTAL_MEDALS || '1.00f');
+    const maxSrMpmLimit = parseCompactNumber(process.env.MAX_SR_MPM || '1.00d');
+
+    const highestMetrics = await db.getHighestMetrics?.('sr');
+    const { highestKnightLevel, highestTotalMedals, highestSrMpm } = highestMetrics || {};
+
     if (!Number.isInteger(knightLevel) || knightLevel <= 0) {
       return interaction.reply({ content: 'Knight level must be a whole number greater than zero.', flags: MessageFlags.Ephemeral });
     }
-    if (!Number.isFinite(totalMedalsValue) || totalMedalsValue <= 0) {
-      return interaction.reply({ content: 'Total medals must be a positive number.', flags: MessageFlags.Ephemeral });
+    if (knightLevel >= maxKnightLevel) {
+      return interaction.reply({ content: `Knight level must be below ${maxKnightLevel}.`, flags: MessageFlags.Ephemeral });
     }
-    if (!Number.isFinite(srMpmValue) || srMpmValue <= 0) {
-      return interaction.reply({ content: 'SR mpm must be a positive number.', flags: MessageFlags.Ephemeral });
+    if (highestKnightLevel !== null && highestKnightLevel !== undefined && knightLevel >= 2 * highestKnightLevel) {
+      return interaction.reply({ content: `Knight level must be less than twice the highest recorded knight level (${2 * highestKnightLevel}).`, flags: MessageFlags.Ephemeral });
     }
+
+    if (!Number.isFinite(totalMedalsValue) || totalMedalsValue <= 1000) {
+      return interaction.reply({ content: 'Total medals must be greater than 1000 (1.00a).', flags: MessageFlags.Ephemeral });
+    }
+    if (totalMedalsValue >= maxTotalMedalsLimit) {
+      return interaction.reply({ content: `Total medals must be below ${compactifyNumber(maxTotalMedalsLimit)}.`, flags: MessageFlags.Ephemeral });
+    }
+    if (highestTotalMedals !== null && highestTotalMedals !== undefined && totalMedalsValue >= 2 * highestTotalMedals) {
+      return interaction.reply({ content: `Total medals must be less than twice the highest recorded total medals (${compactifyNumber(2 * highestTotalMedals)}).`, flags: MessageFlags.Ephemeral });
+    }
+
+    if (!Number.isFinite(srMpmValue) || srMpmValue <= 600) {
+      return interaction.reply({ content: 'SR mpm must be greater than 600.', flags: MessageFlags.Ephemeral });
+    }
+    if (srMpmValue >= maxSrMpmLimit) {
+      return interaction.reply({ content: `SR mpm must be below ${compactifyNumber(maxSrMpmLimit)}.`, flags: MessageFlags.Ephemeral });
+    }
+    if (highestSrMpm !== null && highestSrMpm !== undefined && srMpmValue >= 2 * highestSrMpm) {
+      return interaction.reply({ content: `SR mpm must be less than twice the highest recorded SR mpm (${compactifyNumber(2 * highestSrMpm)}).`, flags: MessageFlags.Ephemeral });
+    }
+
     if (!!rebirthMedalBonus && (!Number.isFinite(rebirthMedalBonusValue) || rebirthMedalBonusValue <= 0)) {
       return interaction.reply({ content: 'Medal buff percent must be a positive number.', flags: MessageFlags.Ephemeral });
     }
@@ -69,6 +98,10 @@ module.exports = {
     const medalsGained = srMpmValue * totalMinutes * srEfficiency;
 
     const estimatedSrPct = (medalsGained / totalMedalsValue) * 100;
+
+    if (!Number.isFinite(estimatedSrPct) || estimatedSrPct <= 0 || estimatedSrPct >= 100) {
+      return interaction.reply({ content: 'SR percentage must be above 0% and below 100%.', flags: MessageFlags.Ephemeral });
+    }
     const estimatedDoubleSrPct = ((medalsGained * 2) / totalMedalsValue) * 100;
 
     let baseEstimatedSrPct;
