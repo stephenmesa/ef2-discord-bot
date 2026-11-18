@@ -60,6 +60,31 @@ describe('hydrateProgress()', () => {
         baseSrMpm: '28.5a',
         baseEstimatedSrPercent: 0.6,
         baseEstimatedSrPercentDouble: 1.2,
+        srEfficiency: 80,
+      });
+    });
+
+    test('Handles progress record with custom sr_efficiency', () => {
+      const now = Date();
+      const result = hydrateProgress({
+        id: 124,
+        user_id: 9191,
+        entry_type: 'sr',
+        knight_level: 32,
+        total_medals: '10.0b',
+        sr_mpm: '1.00a',
+        notes: null,
+        created_at: now,
+        rebirth_medal_bonus: null,
+        sr_efficiency: 100,
+      });
+
+      expect(result).toBeTruthy();
+      expect(result).toMatchObject({
+        id: 124,
+        srEfficiency: 100,
+        estimatedSrPercent: 2.4,
+        estimatedSrPercentDouble: 4.8,
       });
     });
   });

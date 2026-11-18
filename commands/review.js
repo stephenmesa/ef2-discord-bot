@@ -34,6 +34,13 @@ const generateEmbed = (currentEntry) => {
       inline: true,
     });
   }
+  if (currentEntry.srEfficiency != null && Number(currentEntry.srEfficiency) !== 80) {
+    baseMPMFields.push({
+      name: '⚙️ SR Efficiency',
+      value: `${currentEntry.srEfficiency}%`,
+      inline: true,
+    });
+  }
   if (currentEntry.baseSrMpm) {
     baseMPMFields.push({
       name: 'Base SR mpm',

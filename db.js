@@ -42,7 +42,8 @@ async function initDatabase() {
       base_estimated_double_sr_pct NUMERIC,
       total_medals_value NUMERIC,
       sr_mpm_value NUMERIC,
-      base_sr_mpm_value NUMERIC
+      base_sr_mpm_value NUMERIC,
+      sr_efficiency NUMERIC
     );
   `);
   await pool.query(`
@@ -62,7 +63,8 @@ async function initDatabase() {
     ADD COLUMN IF NOT EXISTS base_estimated_double_sr_pct NUMERIC,
     ADD COLUMN IF NOT EXISTS total_medals_value NUMERIC,
     ADD COLUMN IF NOT EXISTS sr_mpm_value NUMERIC,
-    ADD COLUMN IF NOT EXISTS base_sr_mpm_value NUMERIC;
+    ADD COLUMN IF NOT EXISTS base_sr_mpm_value NUMERIC,
+    ADD COLUMN IF NOT EXISTS sr_efficiency NUMERIC;
   `);
 
   const unpopulated = await pool.query(`
@@ -105,17 +107,19 @@ async function insertProgress(entry) {
     baseSRMpm,
     baseEstimatedSrPct,
     baseEstimatedDoubleSrPct,
+    srEfficiency = 80,
   } = entry;
 
   const tmVal = providedTotalMedalsValue ?? parseCompactNumber(totalMedals);
   const mpmVal = providedSrMpmValue ?? parseCompactNumber(srMpm);
   const baseMpmVal = baseSRMpm ? parseCompactNumber(baseSRMpm) : null;
+  const srEfficiencyVal = srEfficiency != null ? Number(srEfficiency) : 80;
 
   const result = await pool.query(
-    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, base_sr_mpm, base_estimated_sr_pct, base_estimated_double_sr_pct, total_medals_value, sr_mpm_value, base_sr_mpm_value)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    `INSERT INTO progress (user_id, entry_type, knight_level, total_medals, sr_mpm, estimated_sr_pct, estimated_double_sr_pct, notes, rebirth_medal_bonus, base_sr_mpm, base_estimated_sr_pct, base_estimated_double_sr_pct, total_medals_value, sr_mpm_value, base_sr_mpm_value, sr_efficiency)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING *;`,
-    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, baseSRMpm || null, baseEstimatedSrPct || null, baseEstimatedDoubleSrPct || null, tmVal, mpmVal, baseMpmVal]
+    [userId, normalizeEntryType(type), knightLevel, totalMedals, srMpm, estimatedSrPct, estimatedDoubleSrPct, notes || null, rebirthMedalBonus || null, baseSRMpm || null, baseEstimatedSrPct || null, baseEstimatedDoubleSrPct || null, tmVal, mpmVal, baseMpmVal, srEfficiencyVal]
   );
 
   return hydrateProgress(result.rows[0]);
@@ -177,13 +181,16 @@ function hydrateProgress(progress) {
     rebirth_medal_bonus: rebirthMedalBonus,
     total_medals_value: dbTotalMedalsValue,
     sr_mpm_value: dbSrMpmValue,
+    sr_efficiency: dbSrEfficiency,
   } = progress;
 
   const srMpmValue = dbSrMpmValue != null ? Number(dbSrMpmValue) : parseCompactNumber(srMpm);
   const totalMedalsValue = dbTotalMedalsValue != null ? Number(dbTotalMedalsValue) : parseCompactNumber(totalMedals);
-  const estimatedSrPercent = calculateSrPercentage(srMpmValue, totalMedalsValue);
+  const srEfficiency = dbSrEfficiency != null ? Number(dbSrEfficiency) : 80;
+  const srEfficiencyFactor = srEfficiency / 100;
+  const estimatedSrPercent = calculateSrPercentage(srMpmValue, totalMedalsValue, srEfficiencyFactor);
   const baseSrMpmValue = calculateBaseMpm(srMpmValue, rebirthMedalBonus);
-  const baseEstimatedSrPercent = calculateSrPercentage(baseSrMpmValue, totalMedalsValue);
+  const baseEstimatedSrPercent = calculateSrPercentage(baseSrMpmValue, totalMedalsValue, srEfficiencyFactor);
 
   return {
     id,
@@ -194,6 +201,7 @@ function hydrateProgress(progress) {
     srMpm,
     totalMedalsValue,
     srMpmValue,
+    srEfficiency,
     estimatedSrPercent: Number(estimatedSrPercent.toFixed(2)),
     estimatedSrPercentDouble: Number((estimatedSrPercent * 2).toFixed(2)),
     notes,

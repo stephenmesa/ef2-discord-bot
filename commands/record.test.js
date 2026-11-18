@@ -278,4 +278,119 @@ describe('record command', () => {
     expect(fieldNames).toContain('⚔️ KL Change');
     expect(fieldNames).toContain('🏅 Medal Change');
   });
+
+  test('validates sr_efficiency_percent', async () => {
+    // < 80
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', undefined, '79'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR efficiency percent must be between 80 and 95, inclusive.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // <= 0
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', undefined, '0'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR efficiency percent must be between 80 and 95, inclusive.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // negative
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', undefined, '-10'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR efficiency percent must be between 80 and 95, inclusive.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // > 95
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', undefined, '96'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR efficiency percent must be between 80 and 95, inclusive.',
+      flags: MessageFlags.Ephemeral,
+    });
+
+    // non-numeric
+    mockInteraction.reply.mockClear();
+    await recordCommand.execute(mockInteraction, [47, '10a', '1a', undefined, 'invalid'], mockContext);
+    expect(mockInteraction.reply).toHaveBeenCalledWith({
+      content: 'SR efficiency percent must be between 80 and 95, inclusive.',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  test('records entry with custom sr_efficiency_percent and calculates medals gained', async () => {
+    // 95% efficiency (inclusive upper bound): 1.00a * 240 * 0.95 = 228a medals gained; 228a / 10.0b = 2.28%
+    const mockEntry = {
+      id: 102,
+      userId: 'user_123',
+      knightLevel: 47,
+      totalMedals: '10.0b',
+      srMpm: '1.00a',
+      srEfficiency: 95,
+      estimatedSrPercent: 2.28,
+      estimatedSrPercentDouble: 4.56,
+      createdAt: new Date('2026-08-02T07:14:00Z'),
+      rebirthMedalBonus: null,
+      baseSrMpm: null,
+      baseEstimatedSrPercent: null,
+      baseEstimatedSrPercentDouble: null,
+    };
+
+    mockContext.db.getLatestEntry.mockResolvedValue(null);
+    mockContext.db.insertProgress.mockResolvedValue(mockEntry);
+    mockContext.db.getNearbyEntries.mockResolvedValue([]);
+
+    await recordCommand.execute(mockInteraction, [47, '10.0b', '1.00a', undefined, '95'], mockContext);
+
+    expect(mockContext.db.insertProgress).toHaveBeenCalledWith(expect.objectContaining({
+      srEfficiency: 95,
+      estimatedSrPct: expect.closeTo(2.28, 5),
+      estimatedDoubleSrPct: expect.closeTo(4.56, 5),
+    }));
+
+    const embed = mockInteraction.reply.mock.calls[0][0].embeds[0];
+    const srPctField = embed.data.fields.find(f => f.name === '📈 SR %');
+    expect(srPctField.value).toContain('228a medals gained');
+    const effField = embed.data.fields.find(f => f.name === '⚙️ SR Efficiency');
+    expect(effField).toBeDefined();
+    expect(effField.value).toBe('**95%**');
+  });
+
+  test('handles optional trailing percent sign on sr_efficiency_percent', async () => {
+    // 85% efficiency: 1.00a * 240 * 0.85 = 204a medals gained; 204a / 10.0b = 2.04%
+    const mockEntry = {
+      id: 103,
+      userId: 'user_123',
+      knightLevel: 47,
+      totalMedals: '10.0b',
+      srMpm: '1.00a',
+      srEfficiency: 85,
+      estimatedSrPercent: 2.04,
+      estimatedSrPercentDouble: 4.08,
+      createdAt: new Date('2026-08-02T07:14:00Z'),
+      rebirthMedalBonus: null,
+      baseSrMpm: null,
+      baseEstimatedSrPercent: null,
+      baseEstimatedSrPercentDouble: null,
+    };
+
+    mockContext.db.getLatestEntry.mockResolvedValue(null);
+    mockContext.db.insertProgress.mockResolvedValue(mockEntry);
+    mockContext.db.getNearbyEntries.mockResolvedValue([]);
+
+    await recordCommand.execute(mockInteraction, [47, '10.0b', '1.00a', undefined, '85%'], mockContext);
+
+    expect(mockContext.db.insertProgress).toHaveBeenCalledWith(expect.objectContaining({
+      srEfficiency: 85,
+      estimatedSrPct: expect.closeTo(2.04, 5),
+      estimatedDoubleSrPct: expect.closeTo(4.08, 5),
+    }));
+
+    const embed = mockInteraction.reply.mock.calls[0][0].embeds[0];
+    const effField = embed.data.fields.find(f => f.name === '⚙️ SR Efficiency');
+    expect(effField).toBeDefined();
+    expect(effField.value).toBe('**85%**');
+  });
 });
