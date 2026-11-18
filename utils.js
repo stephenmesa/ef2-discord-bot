@@ -146,6 +146,9 @@ function formatEntry(row) {
   if (row.rebirthMedalBonus) {
     dataPoints.push(`Rebirth Medal Bonus ${row.rebirthMedalBonus}%`);
   }
+  if (row.srEfficiency != null && Number(row.srEfficiency) !== 80) {
+    dataPoints.push(`SR Efficiency ${row.srEfficiency}%`);
+  }
   if (row.baseSrMpm) {
     dataPoints.push(`Base SR mpm ${row.baseSrMpm}`);
   }
@@ -309,7 +312,7 @@ async function buildChartBuffer(entries, mode = 'combined') {
 
 function buildProgressCsv(rows) {
   const includeReason = rows.some((row) => row.outlierReason !== undefined);
-  const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At', 'Rebirth Medal Bonus', 'Base SR MPM', 'Estimated Base SR %', 'Doubled Base SR %'];
+  const header = ['ID', 'Type', 'Knight Level', 'Total Medals', 'SR mpm', 'Estimated SR %', 'Doubled SR %', 'Created At', 'Rebirth Medal Bonus', 'SR Efficiency %', 'Base SR MPM', 'Estimated Base SR %', 'Doubled Base SR %'];
   if (includeReason) {
     header.push('Reason');
   }
@@ -325,6 +328,7 @@ function buildProgressCsv(rows) {
       Number(row.estimatedSrPercentDouble).toFixed(2),
       new Date(row.createdAt).toISOString(),
       row.rebirthMedalBonus,
+      row.srEfficiency ?? 80,
       row.baseSrMpm,
       row.baseEstimatedSrPercent ? Number(row.baseEstimatedSrPercent).toFixed(2) : null,
       row.baseEstimatedSrPercentDouble ? Number(row.baseEstimatedSrPercentDouble).toFixed(2) : null,
@@ -348,7 +352,8 @@ function getEmbedColor() {
 
 function buildGradeEmbed(record, assessment, options = {}) {
   const { title = '✨ Latest Soul Rest Entry', previous = null } = options;
-  const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
+  const srEfficiencyPct = record.srEfficiency != null ? Number(record.srEfficiency) : 80;
+  const srEfficiency = srEfficiencyPct / 100;
   const totalMinutes = 4 * 60;
   const medalsGained = parseCompactNumber(record.srMpm) * totalMinutes * srEfficiency;
 
@@ -423,7 +428,6 @@ function buildGradeEmbed(record, assessment, options = {}) {
     .setTitle(title)
     .setDescription(description)
     .addFields(
-        { name: '🆔 Entry ID', value: `${record.id}`, inline: true },
         { name: '⚔️ Knight Level', value: `${record.knightLevel}`, inline: true },
         { name: '🏅 Medals', value: `${formatNumber(record.totalMedals)}`, inline: true },
     )
@@ -437,11 +441,22 @@ function buildGradeEmbed(record, assessment, options = {}) {
     embed.addFields(...baseFields);
   }
 
+  if (srEfficiencyPct !== 80) {
+    embed.addFields({ name: '⚙️ SR Efficiency', value: `**${srEfficiencyPct}%**`, inline: true });
+  }
+
   if (previousFields.length > 0) {
     embed.addFields(...previousFields);
   }
 
   if (klFields.length > 0) {
+    const preKlFieldCount = embed.data.fields?.length || 0;
+    const remainder = preKlFieldCount % 3;
+    if (remainder !== 0) {
+      for (let i = 0; i < 3 - remainder; i++) {
+        embed.addFields({ name: '\u200B', value: '\u200B', inline: true });
+      }
+    }
     embed.addFields(...klFields);
   }
 

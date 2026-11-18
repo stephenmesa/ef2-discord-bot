@@ -36,6 +36,12 @@ module.exports = {
       type: 3, // STRING
       required: false,
     },
+    {
+      name: 'sr_efficiency_percent',
+      description: 'Your Soul Rest efficiency percentage. Defaults to 80% (e.g. 85 for 85%)',
+      type: 3, // STRING
+      required: false,
+    },
   ],
   async execute(interaction, args, context) {
     const { db } = context;
@@ -44,11 +50,15 @@ module.exports = {
     const totalMedalsArg = interaction.options?.getString ? interaction.options.getString('total_medals') : args?.[1];
     const srMpmArg = interaction.options?.getString ? interaction.options.getString('sr_mpm') : args?.[2];
     const rebirthMedalBonus = interaction.options?.getString ? interaction.options.getString('medal_buff_percent') : args?.[3];
+    const srEfficiencyArg = interaction.options?.getString ? interaction.options.getString('sr_efficiency_percent') : args?.[4];
 
     const knightLevel = Number(knightLevelArg);
     const totalMedalsValue = parseCompactNumber(totalMedalsArg);
     const srMpmValue = parseCompactNumber(srMpmArg);
     const rebirthMedalBonusValue = Number(rebirthMedalBonus);
+    const rawSrEfficiency = srEfficiencyArg !== undefined && srEfficiencyArg !== null ? String(srEfficiencyArg).trim() : '';
+    const hasSrEfficiency = rawSrEfficiency !== '';
+    const srEfficiencyPercent = hasSrEfficiency ? Number(rawSrEfficiency.replace(/%$/, '').trim()) : 80;
     const totalMedals = compactifyNumber(totalMedalsArg);
     const srMpm = compactifyNumber(srMpmArg);
 
@@ -56,6 +66,7 @@ module.exports = {
     const maxTotalMedalsLimit = parseCompactNumber(process.env.MAX_TOTAL_MEDALS || '1.00f');
     const maxSrMpmLimit = parseCompactNumber(process.env.MAX_SR_MPM || '1.00d');
     const maxMedalBuffPercent = process.env.MAX_MEDAL_BUFF_PERCENT ? Number(process.env.MAX_MEDAL_BUFF_PERCENT) : 20000;
+    const maxSrEfficiencyPercent = process.env.MAX_SR_EFFICIENCY_PERCENT ? Number(process.env.MAX_SR_EFFICIENCY_PERCENT) : 95;
 
     const highestMetrics = await db.getHighestMetrics?.('sr');
     const { highestKnightLevel, highestTotalMedals, highestSrMpm } = highestMetrics || {};
@@ -94,7 +105,11 @@ module.exports = {
       return interaction.reply({ content: `Medal buff percent must be above 0 and below ${maxMedalBuffPercent}.`, flags: MessageFlags.Ephemeral });
     }
 
-    const srEfficiency = 0.8; // Assume 80% efficiency for SR for now
+    if (hasSrEfficiency && (!Number.isFinite(srEfficiencyPercent) || srEfficiencyPercent < 80 || srEfficiencyPercent > maxSrEfficiencyPercent)) {
+      return interaction.reply({ content: `SR efficiency percent must be between 80 and ${maxSrEfficiencyPercent}, inclusive.`, flags: MessageFlags.Ephemeral });
+    }
+
+    const srEfficiency = srEfficiencyPercent / 100;
     const totalMinutes = 4 * 60;
     const medalsGained = srMpmValue * totalMinutes * srEfficiency;
 
@@ -133,6 +148,7 @@ module.exports = {
       baseSRMpm,
       baseEstimatedSrPct,
       baseEstimatedDoubleSrPct,
+      srEfficiency: srEfficiencyPercent,
     });
 
     const nearbyEntries = await db.getNearbyEntries('sr', knightLevel, 1, entry.id);

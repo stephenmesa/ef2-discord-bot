@@ -10,7 +10,7 @@ jest.mock('quickchart-js', () => {
   });
 });
 
-const { parseCompactNumber, compactifyNumber, calculateBaseMpm, buildScatterChartBuffer } = require('./utils');
+const { parseCompactNumber, compactifyNumber, calculateBaseMpm, buildScatterChartBuffer, buildGradeEmbed } = require('./utils');
 const QuickChart = require('quickchart-js');
 
 describe('calculateBaseMpm', () => {
@@ -297,5 +297,90 @@ describe('buildScatterChartBuffer', () => {
         })
       })
     }));
+  });
+});
+
+describe('buildGradeEmbed', () => {
+  test('uses custom srEfficiency to calculate medals gained and displays efficiency field when non-default', () => {
+    const record = {
+      id: 1,
+      knightLevel: 50,
+      totalMedals: '10.0b',
+      srMpm: '1.00a',
+      srEfficiency: 100,
+      estimatedSrPercent: 2.4,
+      estimatedSrPercentDouble: 4.8,
+      createdAt: new Date('2026-08-02T07:14:00Z'),
+    };
+    const assessment = { score: 75, kls: {} };
+
+    const embed = buildGradeEmbed(record, assessment);
+    const srField = embed.data.fields.find(f => f.name === '📈 SR %');
+    const doubleSrField = embed.data.fields.find(f => f.name === '⚡ Double SR %');
+    const effField = embed.data.fields.find(f => f.name === '⚙️ SR Efficiency');
+
+    expect(srField.value).toContain('240a medals gained');
+    expect(doubleSrField.value).toContain('480a medals gained');
+    expect(effField).toBeDefined();
+    expect(effField.value).toBe('**100%**');
+  });
+
+  test('defaults to 80% efficiency and omits efficiency field when srEfficiency is 80 or absent', () => {
+    const record = {
+      id: 2,
+      knightLevel: 50,
+      totalMedals: '10.0b',
+      srMpm: '1.00a',
+      estimatedSrPercent: 1.92,
+      estimatedSrPercentDouble: 3.84,
+      createdAt: new Date('2026-08-02T07:14:00Z'),
+    };
+    const assessment = { score: 75, kls: {} };
+
+    const embed = buildGradeEmbed(record, assessment);
+    const srField = embed.data.fields.find(f => f.name === '📈 SR %');
+    const effField = embed.data.fields.find(f => f.name === '⚙️ SR Efficiency');
+
+    expect(srField.value).toContain('192a medals gained');
+    expect(effField).toBeUndefined();
+  });
+
+  test('pads fields before neighboring KL fields so KL fields always start on a new row', () => {
+    const record = {
+      id: 3,
+      knightLevel: 43,
+      totalMedals: '254c',
+      srMpm: '2.5b',
+      estimatedSrPercent: 0.19,
+      estimatedSrPercentDouble: 0.38,
+      baseSrMpm: '148a',
+      baseEstimatedSrPercent: 0.01,
+      baseEstimatedSrPercentDouble: 0.02,
+      createdAt: new Date('2026-08-02T07:14:00Z'),
+    };
+    const previous = {
+      knightLevel: 43,
+      totalMedals: '254c',
+    };
+    const assessment = {
+      score: 15,
+      baseScore: 100,
+      kls: {
+        42: { n: 2, percentageMin: 3.06, percentageMax: 3.5 },
+        43: { n: 7, percentageMin: 0.19, percentageMax: 3.46 },
+        44: { n: 4, percentageMin: 1.92, percentageMax: 3.02 },
+      },
+    };
+
+    const embed = buildGradeEmbed(record, assessment, { previous });
+    const fields = embed.data.fields;
+    const firstKlIndex = fields.findIndex(f => f.name.startsWith('KL42'));
+
+    expect(firstKlIndex % 3).toBe(0);
+    expect(fields.slice(firstKlIndex).map(f => f.name)).toEqual([
+      'KL42 (2 records)',
+      'KL43 (7 records)',
+      'KL44 (4 records)',
+    ]);
   });
 });
